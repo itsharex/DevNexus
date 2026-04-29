@@ -1003,3 +1003,5 @@ pm test。
 - 2026-04-29 00:08-00:11 接入 macOS 自动打包 CI：新增 .github/workflows/build-macos.yml，支持 workflow_dispatch、push main、* tag 触发；在 macos-latest 上执行 
 pm ci + 
 pm run tauri build -- --bundles app,dmg，并上传 .app 与 .dmg 构建产物。
+
+- 2026-04-29 00:20-00:27 扩展 CI 为全平台打包：将 workflow 升级为 uild-desktop，新增 Windows（NSIS .exe）、macOS（.app/.dmg）、Linux（.deb/.AppImage）三个并行 job，统一支持 workflow_dispatch、push main、* tag 触发并上传对应 artifacts。
