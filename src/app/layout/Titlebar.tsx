@@ -37,7 +37,7 @@ export function Titlebar() {
           void appWindow.toggleMaximize();
         }}
       >
-        <Typography.Text className="rdmm-titlebar__title">RDMM</Typography.Text>
+        <Typography.Text className="rdmm-titlebar__title">DevNexus</Typography.Text>
       </div>
       <Space size={4}>
         <Button

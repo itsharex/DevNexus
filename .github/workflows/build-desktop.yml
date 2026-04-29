@@ -36,7 +36,7 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: RDMM-windows-nsis
+          name: DevNexus-windows-nsis
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
@@ -64,14 +64,14 @@ jobs:
       - name: Upload .app bundle
         uses: actions/upload-artifact@v4
         with:
-          name: RDMM-macOS-app
+          name: DevNexus-macOS-app
           path: src-tauri/target/release/bundle/macos/*.app
           if-no-files-found: error
 
       - name: Upload .dmg installer
         uses: actions/upload-artifact@v4
         with:
-          name: RDMM-macOS-dmg
+          name: DevNexus-macOS-dmg
           path: src-tauri/target/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
@@ -109,13 +109,13 @@ jobs:
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v4
         with:
-          name: RDMM-linux-appimage
+          name: DevNexus-linux-appimage
           path: src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: error
 
       - name: Upload Linux DEB
         uses: actions/upload-artifact@v4
         with:
-          name: RDMM-linux-deb
+          name: DevNexus-linux-deb
           path: src-tauri/target/release/bundle/deb/*.deb
           if-no-files-found: error

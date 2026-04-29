@@ -1005,3 +1005,7 @@ pm ci +
 pm run tauri build -- --bundles app,dmg，并上传 .app 与 .dmg 构建产物。
 
 - 2026-04-29 00:20-00:27 扩展 CI 为全平台打包：将 workflow 升级为 uild-desktop，新增 Windows（NSIS .exe）、macOS（.app/.dmg）、Linux（.deb/.AppImage）三个并行 job，统一支持 workflow_dispatch、push main、* tag 触发并上传对应 artifacts。
+
+- 2026-04-29 13:08-13:13 品牌重命名：项目名由 RDMM 升级为 DevNexus（开发工具中枢）。已同步更新应用标题、Tauri productName/identifier（com.devnexus.desktop）、Rust crate 名（devnexus/devnexus_lib）、前端品牌文案、README 与跨平台 CI 产物命名。验证通过：
+pm run build、cargo check、
+pm test。

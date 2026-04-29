@@ -83,7 +83,7 @@ export function ConsoleView() {
       },
     });
     terminal.open(termContainerRef.current);
-    terminal.writeln("RDMM Redis Console Ready.");
+    terminal.writeln("DevNexus Redis Console Ready.");
     termRef.current = terminal;
     return () => {
       terminal.dispose();

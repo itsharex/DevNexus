@@ -1,6 +1,6 @@
-# RDMM (Redis & Dev Manager)
+# DevNexus (Developer Toolbox)
 
-RDMM is a plugin-based Windows desktop toolbox built with Tauri + React.
+DevNexus is a plugin-based desktop toolbox built with Tauri + React.
 Phase 1 targets a Redis management plugin.
 
 ## Development

@@ -34,7 +34,7 @@ export function Sidebar() {
       <div className="rdmm-sidebar__top">
         <div className="rdmm-sidebar__brand">
           <AppstoreOutlined />
-          {sidebarCollapsed ? null : <span>RDMM</span>}
+          {sidebarCollapsed ? null : <span>DevNexus</span>}
         </div>
         <Button
           type="text"
