@@ -1011,3 +1011,5 @@ pm run build、cargo check、
 pm test。
 
 - 2026-04-29 13:20-13:31 发版流程建设：新增 .github/workflows/release.yml，在 * tag 触发时并行构建 Windows/macOS/Linux 包并自动上传到 GitHub Release；新增发布说明 docs/releases/v0.1.0.md；将 uild-desktop 标签触发调整为仅 workflow_dispatch + push main，避免与 release 工作流重复构建。
+
+- 2026-04-29 16:00-16:05 Redis KeyBrowser 交互增强：实现 Key Tree 与 Key Detail 可拖拽分栏，支持中线拖动实时调整宽度，并添加最小宽度保护（左 300px / 右 420px）与分割条高亮反馈。同步新增发版文档 docs/releases/v0.2.0.md。

@@ -12,7 +12,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 import { HashEditor } from "@/plugins/redis-manager/components/editors/HashEditor";
@@ -75,6 +75,9 @@ export function KeyBrowser() {
   const [importPreviewPath, setImportPreviewPath] = useState<string | null>(null);
   const [importPreviewItems, setImportPreviewItems] = useState<ExportItem[]>([]);
   const [importing, setImporting] = useState(false);
+  const splitContainerRef = useRef<HTMLDivElement | null>(null);
+  const [leftPaneWidth, setLeftPaneWidth] = useState(420);
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     if (!connId) {
@@ -83,6 +86,15 @@ export function KeyBrowser() {
     resetScan();
     void scanMore(connId);
   }, [connId, activeDbIndex, resetScan, scanMore]);
+
+  useEffect(() => {
+    const container = splitContainerRef.current;
+    if (!container) return;
+    const minLeft = 300;
+    const minRight = 420;
+    const maxLeft = Math.max(minLeft, container.clientWidth - minRight);
+    setLeftPaneWidth((prev) => Math.min(Math.max(prev, minLeft), maxLeft));
+  }, []);
 
   const details = useMemo(() => {
     if (!selectedKey || !selectedType) {
@@ -237,9 +249,9 @@ export function KeyBrowser() {
           </Typography.Text>
         </Col>
       </Row>
-      <Row gutter={12}>
-      <Col span={10}>
-        <Card title={`Key Tree (DB ${activeDbIndex})`}>
+      <div className="rdmm-key-browser-split" ref={splitContainerRef}>
+        <div className="rdmm-key-browser-pane" style={{ width: leftPaneWidth }}>
+          <Card title={`Key Tree (DB ${activeDbIndex})`} style={{ height: "100%" }}>
           <KeyTree
             keys={keys}
             loading={loading}
@@ -295,112 +307,142 @@ export function KeyBrowser() {
             </Button>
           </Space>
         </Card>
-      </Col>
-      <Col span={14}>
-        <Card title="Key Detail">
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Space>
-              <Select
-                value={exportFormat}
-                onChange={(value) => setExportFormat(value)}
-                options={[
-                  { label: "JSON", value: "Json" },
-                  { label: "CSV", value: "Csv" },
-                ]}
-                style={{ width: 100 }}
-              />
-              <Button
-                onClick={() => {
-                  const list = selectedKeys.length > 0 ? selectedKeys : selectedKey ? [selectedKey] : [];
-                  if (list.length === 0) return;
-                  void invoke<string>("cmd_export_keys", {
-                    connId,
-                    keys: list,
-                    format: exportFormat,
-                  }).then((path) => message.success(`exported: ${path}`));
-                }}
-              >
-                Export
-              </Button>
-              <Button
-                onClick={() => {
-                  void invoke<string | null>("cmd_pick_import_file")
-                    .then((path) => {
-                      if (!path) {
-                        message.info("Put a .json file into app_data/imports and retry.");
-                        return;
-                      }
-                      return invoke<ExportItem[]>("cmd_preview_import_file", {
-                        filePath: path,
-                        count: 10,
-                      }).then((items) => {
-                        setImportPreviewPath(path);
-                        setImportPreviewItems(items);
-                        setImportPreviewOpen(true);
-                      });
-                    })
-                    .catch((err: unknown) => message.error(String(err)));
-                }}
-              >
-                Import
-              </Button>
+        </div>
+        <div
+          className={`rdmm-key-browser-divider${isResizing ? " is-resizing" : ""}`}
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={(event) => {
+            if (!splitContainerRef.current) return;
+            event.preventDefault();
+            const container = splitContainerRef.current;
+            const bounds = container.getBoundingClientRect();
+            const minLeft = 300;
+            const minRight = 420;
+            setIsResizing(true);
+
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              const raw = moveEvent.clientX - bounds.left;
+              const maxLeft = Math.max(minLeft, bounds.width - minRight);
+              const next = Math.min(Math.max(raw, minLeft), maxLeft);
+              setLeftPaneWidth(next);
+            };
+            const onMouseUp = () => {
+              setIsResizing(false);
+              document.removeEventListener("mousemove", onMouseMove);
+              document.removeEventListener("mouseup", onMouseUp);
+            };
+
+            document.addEventListener("mousemove", onMouseMove);
+            document.addEventListener("mouseup", onMouseUp);
+          }}
+        />
+        <div className="rdmm-key-browser-pane rdmm-key-browser-pane--right">
+          <Card title="Key Detail" style={{ height: "100%" }}>
+            <Space direction="vertical" style={{ width: "100%" }}>
+              <Space>
+                <Select
+                  value={exportFormat}
+                  onChange={(value) => setExportFormat(value)}
+                  options={[
+                    { label: "JSON", value: "Json" },
+                    { label: "CSV", value: "Csv" },
+                  ]}
+                  style={{ width: 100 }}
+                />
+                <Button
+                  onClick={() => {
+                    const list = selectedKeys.length > 0 ? selectedKeys : selectedKey ? [selectedKey] : [];
+                    if (list.length === 0) return;
+                    void invoke<string>("cmd_export_keys", {
+                      connId,
+                      keys: list,
+                      format: exportFormat,
+                    }).then((path) => message.success(`exported: ${path}`));
+                  }}
+                >
+                  Export
+                </Button>
+                <Button
+                  onClick={() => {
+                    void invoke<string | null>("cmd_pick_import_file")
+                      .then((path) => {
+                        if (!path) {
+                          message.info("Put a .json file into app_data/imports and retry.");
+                          return;
+                        }
+                        return invoke<ExportItem[]>("cmd_preview_import_file", {
+                          filePath: path,
+                          count: 10,
+                        }).then((items) => {
+                          setImportPreviewPath(path);
+                          setImportPreviewItems(items);
+                          setImportPreviewOpen(true);
+                        });
+                      })
+                      .catch((err: unknown) => message.error(String(err)));
+                  }}
+                >
+                  Import
+                </Button>
+              </Space>
+              <Space>
+                <Tag color="blue">{selectedType ?? "unknown"}</Tag>
+                <Typography.Text>TTL: {selectedTtl}</Typography.Text>
+                <Input
+                  style={{ width: 120 }}
+                  placeholder="ttl seconds"
+                  value={ttlInput}
+                  onChange={(event) => setTtlInput(event.target.value)}
+                />
+                <Button
+                  onClick={() => {
+                    const ttl = Number(ttlInput);
+                    if (!Number.isFinite(ttl) || ttl <= 0) {
+                      message.error("invalid TTL");
+                      return;
+                    }
+                    void updateTTL(connId, ttl);
+                  }}
+                >
+                  Set TTL
+                </Button>
+              </Space>
+              <Space>
+                <Input
+                  style={{ width: 280 }}
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                />
+                <Button
+                  onClick={() => {
+                    if (!selectedKey || !newName || selectedKey === newName) {
+                      return;
+                    }
+                    void renameKey(connId, selectedKey, newName);
+                  }}
+                >
+                  Rename
+                </Button>
+                <Button
+                  danger
+                  onClick={() => {
+                    if (!selectedKey) {
+                      return;
+                    }
+                    void deleteKeys(connId, [selectedKey]).then((deleted) =>
+                      message.info(`deleted: ${deleted}`),
+                    );
+                  }}
+                >
+                  Delete
+                </Button>
+              </Space>
+              {details}
             </Space>
-            <Space>
-              <Tag color="blue">{selectedType ?? "unknown"}</Tag>
-              <Typography.Text>TTL: {selectedTtl}</Typography.Text>
-              <Input
-                style={{ width: 120 }}
-                placeholder="ttl seconds"
-                value={ttlInput}
-                onChange={(event) => setTtlInput(event.target.value)}
-              />
-              <Button
-                onClick={() => {
-                  const ttl = Number(ttlInput);
-                  if (!Number.isFinite(ttl) || ttl <= 0) {
-                    message.error("invalid TTL");
-                    return;
-                  }
-                  void updateTTL(connId, ttl);
-                }}
-              >
-                Set TTL
-              </Button>
-            </Space>
-            <Space>
-              <Input
-                style={{ width: 280 }}
-                value={newName}
-                onChange={(event) => setNewName(event.target.value)}
-              />
-              <Button
-                onClick={() => {
-                  if (!selectedKey || !newName || selectedKey === newName) {
-                    return;
-                  }
-                  void renameKey(connId, selectedKey, newName);
-                }}
-              >
-                Rename
-              </Button>
-              <Button
-                danger
-                onClick={() => {
-                  if (!selectedKey) {
-                    return;
-                  }
-                  void deleteKeys(connId, [selectedKey]).then((deleted) =>
-                    message.info(`deleted: ${deleted}`),
-                  );
-                }}
-              >
-                Delete
-              </Button>
-            </Space>
-            {details}
-          </Space>
-        </Card>
-      </Col>
+          </Card>
+        </div>
+      </div>
       <Modal
         title="Import Preview"
         open={importPreviewOpen}
@@ -457,7 +499,6 @@ export function KeyBrowser() {
           )}
         </Space>
       </Modal>
-      </Row>
     </Space>
   );
 }
