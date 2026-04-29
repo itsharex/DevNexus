@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /d/rdmm log --oneline -10)",
+      "Bash(git -C /d/rdmm status)"
+    ]
+  }
+}
