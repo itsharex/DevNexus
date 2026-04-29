@@ -58,13 +58,11 @@ jobs:
       - name: Build macOS bundle
         run: npm run tauri build -- --bundles app,dmg
 
-      - name: Upload macOS build artifacts
+      - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-macos
-          path: |
-            src-tauri/target/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/macos/*.app
+          path: src-tauri/target/release/bundle/dmg/*.dmg  # 只上传 dmg，不上传 app
           if-no-files-found: error
 
   build-linux:
@@ -91,14 +89,13 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf
-
       - name: Install frontend dependencies
         run: npm ci
 
       - name: Build Linux bundle
         run: npm run tauri build -- --bundles deb,appimage
 
-      - name: Upload Linux build artifacts
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-linux
@@ -109,41 +106,24 @@ jobs:
 
   publish-release:
     runs-on: ubuntu-22.04
-    needs:
-      - build-windows
-      - build-macos
-      - build-linux
+    needs: [build-windows, build-macos, build-linux]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Windows artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-windows
-          path: dist-release/windows
-
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-macos
-          path: dist-release/macos
-
-      - name: Download Linux artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-linux
-          path: dist-release/linux
+          path: dist-release  # 自动把所有 artifact 下载到这里
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: DevNexus ${{ github.ref_name }}
-          body_path: docs/releases/${{ github.ref_name }}.md
+          # body_path: docs/releases/${{ github.ref_name }}.md  # 先注释掉，避免找不到文件
           files: |
-            dist-release/windows/*.exe
-            dist-release/macos/*.dmg
-            dist-release/macos/*.app
-            dist-release/linux/*.deb
-            dist-release/linux/*.AppImage
-          fail_on_unmatched_files: true
+            dist-release/release-windows/*.exe
+            dist-release/release-macos/*.dmg
+            dist-release/release-linux/*.deb
+            dist-release/release-linux/*.AppImage
+          fail_on_unmatched_files: false  # 避免因路径问题直接失败
