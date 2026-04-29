@@ -1,16 +1,15 @@
-name: build-desktop
+name: release
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  tauri-windows:
+  build-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -31,14 +30,14 @@ jobs:
       - name: Build Windows bundle
         run: npm run tauri build -- --bundles nsis
 
-      - name: Upload Windows installer
+      - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DevNexus-windows-nsis
+          name: release-windows
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
-  tauri-macos:
+  build-macos:
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -59,21 +58,16 @@ jobs:
       - name: Build macOS bundle
         run: npm run tauri build -- --bundles app,dmg
 
-      - name: Upload .app bundle
+      - name: Upload macOS build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DevNexus-macOS-app
-          path: src-tauri/target/release/bundle/macos/*.app
+          name: release-macos
+          path: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app
           if-no-files-found: error
 
-      - name: Upload .dmg installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: DevNexus-macOS-dmg
-          path: src-tauri/target/release/bundle/dmg/*.dmg
-          if-no-files-found: error
-
-  tauri-linux:
+  build-linux:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -104,16 +98,52 @@ jobs:
       - name: Build Linux bundle
         run: npm run tauri build -- --bundles deb,appimage
 
-      - name: Upload Linux AppImage
+      - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DevNexus-linux-appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          name: release-linux
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: error
 
-      - name: Upload Linux DEB
-        uses: actions/upload-artifact@v4
+  publish-release:
+    runs-on: ubuntu-22.04
+    needs:
+      - build-windows
+      - build-macos
+      - build-linux
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: DevNexus-linux-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
-          if-no-files-found: error
+          name: release-windows
+          path: dist-release/windows
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos
+          path: dist-release/macos
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux
+          path: dist-release/linux
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DevNexus ${{ github.ref_name }}
+          body_path: docs/releases/${{ github.ref_name }}.md
+          files: |
+            dist-release/windows/*.exe
+            dist-release/macos/*.dmg
+            dist-release/macos/*.app
+            dist-release/linux/*.deb
+            dist-release/linux/*.AppImage
+          fail_on_unmatched_files: true
