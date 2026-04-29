@@ -120,7 +120,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: DevNexus ${{ github.ref_name }}
-          # body_path: docs/releases/${{ github.ref_name }}.md  # 先注释掉，避免找不到文件
+          body_path: docs/releases/${{ github.ref_name }}.md  # 先注释掉，避免找不到文件
           files: |
             dist-release/release-windows/*.exe
             dist-release/release-macos/*.dmg
