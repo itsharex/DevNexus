@@ -12,7 +12,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 import { HashEditor } from "@/plugins/redis-manager/components/editors/HashEditor";
@@ -86,6 +86,17 @@ export function KeyBrowser() {
     resetScan();
     void scanMore(connId);
   }, [connId, activeDbIndex, resetScan, scanMore]);
+
+  const handleKeySearch = useCallback(
+    (pattern: string) => {
+      setPattern(pattern);
+      resetScan();
+      if (connId) {
+        void scanMore(connId);
+      }
+    },
+    [connId, resetScan, scanMore, setPattern],
+  );
 
   useEffect(() => {
     const container = splitContainerRef.current;
@@ -257,16 +268,25 @@ export function KeyBrowser() {
             loading={loading}
             selectedKeys={selectedKeys}
             onToggleSelect={toggleSelectedKey}
-            onSearch={(pattern) => {
-              setPattern(pattern);
-              resetScan();
-              void scanMore(connId);
-            }}
+            onSearch={handleKeySearch}
             onSelect={(key) => {
               void loadKeyDetail(connId, key);
               setNewName(key);
             }}
             onLoadMore={() => void scanMore(connId)}
+            onDelete={(key) => {
+              void deleteKeys(connId, [key]).then((deleted) =>
+                message.info(`deleted: ${deleted}`),
+              );
+            }}
+            onRename={(key, nextKey) => {
+              void renameKey(connId, key, nextKey).then(() => setNewName(nextKey));
+            }}
+            onSetTtl={(key, ttl) => {
+              void invoke("cmd_set_ttl", { connId, key, ttlSeconds: ttl }).then(() =>
+                message.success("TTL updated"),
+              );
+            }}
           />
           <Space>
             <Button

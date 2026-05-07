@@ -239,12 +239,12 @@ rdmm/
 - [x] `cmd_zscore(conn_id, key, member) -> Option<f64>`
 
 ### 2.8 前端 - Key 树组件
-- [ ] `KeyTree.tsx`：按 `:` 分隔符将 Key 解析为树形结构（如 `user:1:name` → user > 1 > name）
+- [x] `KeyTree.tsx`：按 `:` 分隔符将 Key 解析为树形结构（如 `user:1:name` → user > 1 > name）
 - [x] 使用 `@tanstack/react-virtual` 虚拟渲染，支持 10 万+ Key 不卡顿
 - [x] 树节点显示：Key 名、类型图标（颜色区分）、TTL 角标（快过期时红色警示）
-- [ ] 顶部搜索框：输入 pattern 触发 SCAN（防抖 300ms）
+- [x] 顶部搜索框：输入 pattern 触发 SCAN（防抖 300ms）
 - [x] 支持"加载更多"按钮（cursor 分页）
-- [ ] 右键菜单：复制 Key 名、查看详情、设置 TTL、删除、重命名
+- [x] 右键菜单：复制 Key 名、查看详情、设置 TTL、删除、重命名
 
 ### 2.9 前端 - Key 详情面板
 - [x] 右侧面板布局：Key 名（可点击编辑重命名）、类型标签、TTL 显示与编辑、数据编辑区
@@ -295,10 +295,10 @@ rdmm/
 
 ### 3.2 前端 - 控制台界面
 - [x] `Console.tsx`：使用 xterm.js 渲染终端
-- [ ] 顶部选择当前连接和 DB index
+- [x] 顶部选择当前连接和 DB index
 - [x] 输入区支持上下键翻历史命令
 - [x] 命令自动补全（常用命令关键字提示）
-- [ ] 输出结果格式化：Array 类型按行缩进显示，Error 红色显示
+- [x] 输出结果格式化：Array 类型按行缩进显示，Error 红色显示
 - [x] 历史记录面板（侧边抽屉）：查看、一键重新执行历史命令
 
 ---
@@ -741,7 +741,7 @@ src-tauri/src/plugins/s3/
 ### 13.3 Rust 后端 - 连接 CRUD Commands
 - [x] `db/s3_connection_repo.rs`：实现 `list_s3_connections()`、`save_s3_connection()`、`delete_s3_connection()`、`get_s3_connection(id)`
   - `secret_access_key` 使用已有 `crypto` 模块加密存储
-- [ ] `commands.rs` 暴露：
+- [x] `commands.rs` 暴露：
   - [x] `cmd_s3_list_connections() -> Vec<S3ConnectionInfo>`
   - [x] `cmd_s3_save_connection(form: S3ConnectionForm) -> Result<String>`（返回 id）
   - [x] `cmd_s3_delete_connection(id: String) -> Result<()>`
@@ -775,9 +775,9 @@ src-tauri/src/plugins/s3/
 - [x] `cmd_s3_list_buckets(conn_id) -> Result<Vec<BucketInfo>>`：调用 `list_buckets()`，返回 `{ name, creation_date, region? }`
 - [x] `cmd_s3_create_bucket(conn_id, name, region?) -> Result<()>`：调用 `create_bucket()`，自动处理 AWS `CreateBucketConfiguration`（非 us-east-1 需要指定 region）
 - [x] `cmd_s3_delete_bucket(conn_id, name) -> Result<()>`：调用 `delete_bucket()`（桶必须为空，否则返回具体错误）
-- [ ] `cmd_s3_get_bucket_location(conn_id, bucket) -> Result<String>`：获取 bucket 所在 region
-- [ ] `cmd_s3_get_bucket_versioning(conn_id, bucket) -> Result<VersioningStatus>`：返回 `Enabled / Suspended / Disabled`
-- [ ] `cmd_s3_set_bucket_versioning(conn_id, bucket, enabled: bool) -> Result<()>`
+- [x] `cmd_s3_get_bucket_location(conn_id, bucket) -> Result<String>`：获取 bucket 所在 region
+- [x] `cmd_s3_get_bucket_versioning(conn_id, bucket) -> Result<VersioningStatus>`：返回 `Enabled / Suspended / Disabled`
+- [x] `cmd_s3_set_bucket_versioning(conn_id, bucket, enabled: bool) -> Result<()>`
 
 ### 14.2 前端 - Bucket 列表页
 - [x] `BucketList.tsx`：表格展示 Bucket 名、Region、创建时间、版本控制状态
@@ -798,35 +798,35 @@ src-tauri/src/plugins/s3/
   - 调用 `list_objects_v2()`，使用 `delimiter = "/"` 模拟目录结构
   - 返回 `{ objects: Vec<ObjectItem>, common_prefixes: Vec<String>, next_token?, is_truncated }`
   - `ObjectItem`：`{ key, size, last_modified, etag, storage_class, is_latest? }`
-- [ ] `cmd_s3_list_object_versions(conn_id, bucket, prefix) -> Result<Vec<ObjectVersion>>`：列出所有版本（开启版本控制时使用）
+- [x] `cmd_s3_list_object_versions(conn_id, bucket, prefix) -> Result<Vec<ObjectVersion>>`：列出所有版本（开启版本控制时使用）
 
 ### 15.2 Rust 后端 - 对象基本操作
-- [ ] `cmd_s3_head_object(conn_id, bucket, key) -> Result<ObjectMeta>`：获取元数据（`{ content_type, content_length, last_modified, etag, metadata: HashMap, version_id? }`）
+- [x] `cmd_s3_head_object(conn_id, bucket, key) -> Result<ObjectMeta>`：获取元数据（`{ content_type, content_length, last_modified, etag, metadata: HashMap, version_id? }`）
 - [x] `cmd_s3_delete_object(conn_id, bucket, key, version_id?) -> Result<()>`
-- [ ] `cmd_s3_delete_objects(conn_id, bucket, keys: Vec<String>) -> Result<DeleteObjectsResult>`：批量删除，返回 `{ deleted_count, errors: Vec<DeleteError> }`
-- [ ] `cmd_s3_copy_object(conn_id, src_bucket, src_key, dst_bucket, dst_key) -> Result<()>`：同账号内复制
-- [ ] `cmd_s3_move_object(conn_id, src_bucket, src_key, dst_bucket, dst_key) -> Result<()>`：复制后删除源
-- [ ] `cmd_s3_rename_object(conn_id, bucket, old_key, new_key) -> Result<()>`：等同于同桶内 move
+- [x] `cmd_s3_delete_objects(conn_id, bucket, keys: Vec<String>) -> Result<DeleteObjectsResult>`：批量删除，返回 `{ deleted_count, errors: Vec<DeleteError> }`
+- [x] `cmd_s3_copy_object(conn_id, src_bucket, src_key, dst_bucket, dst_key) -> Result<()>`：同账号内复制
+- [x] `cmd_s3_move_object(conn_id, src_bucket, src_key, dst_bucket, dst_key) -> Result<()>`：复制后删除源
+- [x] `cmd_s3_rename_object(conn_id, bucket, old_key, new_key) -> Result<()>`：等同于同桶内 move
 - [x] `cmd_s3_create_folder(conn_id, bucket, prefix) -> Result<()>`：上传一个空的 `prefix/` 对象模拟文件夹
 
 ### 15.3 前端 - 对象浏览主视图
 - [x] `ObjectBrowser.tsx`：顶部面包屑导航 + 工具栏 + 主体对象列表
-- [ ] `BreadcrumbNav.tsx`：展示当前路径（连接名 / Bucket 名 / 前缀层级），点击任意层跳转
+- [x] `BreadcrumbNav.tsx`：展示当前路径（连接名 / Bucket 名 / 前缀层级），点击任意层跳转
 - [x] 工具栏（左）：上传文件、上传文件夹、新建文件夹
-- [ ] 工具栏（右）：视图切换（列表/网格）、排序（名称/大小/修改时间）、搜索框（调用 list 过滤 prefix）、刷新
+- [x] 工具栏（右）：视图切换（列表/网格）、排序（名称/大小/修改时间）、搜索框（调用 list 过滤 prefix）、刷新
 
 ### 15.4 前端 - 对象列表组件
-- [ ] `ObjectList.tsx`：使用 `@tanstack/react-virtual` 虚拟渲染，支持万级对象不卡顿
-- [ ] 列表模式：图标（文件夹/文件类型）、名称、大小、修改时间、存储类型、操作列
-- [ ] 网格模式：文件图标卡片（图片类型显示缩略图）
-- [ ] 文件夹行（common_prefix）：双击进入，右键菜单：下载文件夹（递归）、删除文件夹（递归）、复制路径
-- [ ] 文件行右键菜单：下载、预览、复制 URL（公开）、生成预签名 URL、复制对象路径、重命名、移动、删除
-- [ ] 多选：Checkbox 列 + Shift 连选 + Ctrl 单选；选中后底部浮现批量操作栏（批量下载、批量删除、批量移动）
+- [x] `ObjectList.tsx`：使用 `@tanstack/react-virtual` 虚拟渲染，支持万级对象不卡顿
+- [x] 列表模式：图标（文件夹/文件类型）、名称、大小、修改时间、存储类型、操作列
+- [x] 网格模式：文件图标卡片（图片类型显示缩略图）
+- [x] 文件夹行（common_prefix）：双击进入，右键菜单：下载文件夹（递归）、删除文件夹（递归）、复制路径
+- [x] 文件行右键菜单：下载、预览、复制 URL（公开）、生成预签名 URL、复制对象路径、重命名、移动、删除
+- [x] 多选：Checkbox 列 + Shift 连选 + Ctrl 单选；选中后底部浮现批量操作栏（批量下载、批量删除、批量移动）
 - [x] "加载更多"按钮（基于 `continuation_token` 分页，每次 200 条）
 
 ### 15.5 前端 - 对象元数据侧边抽屉
-- [ ] `ObjectMetaDrawer.tsx`：点击文件行"详情"打开右侧抽屉
-- [ ] 展示：对象键名、存储类型、大小、ETag、最后修改时间、Content-Type、自定义 Metadata（key-value 表格）、版本 ID（若启用版本控制）
+- [x] `ObjectMetaDrawer.tsx`：点击文件行"详情"打开右侧抽屉
+- [x] 展示：对象键名、存储类型、大小、ETag、最后修改时间、Content-Type、自定义 Metadata（key-value 表格）、版本 ID（若启用版本控制）
 - [ ] 版本历史列表（当 Bucket 开启版本控制时）：展示所有版本，可下载指定版本、删除特定版本
 
 ---
@@ -834,20 +834,20 @@ src-tauri/src/plugins/s3/
 ## Phase 16：上传下载与进度管理
 
 ### 16.1 Rust 后端 - 分片上传
-- [ ] `cmd_s3_upload_file(conn_id, bucket, key, local_path, storage_class?) -> Result<String>`（返回 transfer_id）：
+- [x] `cmd_s3_upload_file(conn_id, bucket, key, local_path, storage_class?) -> Result<String>`（返回 transfer_id）：
   - 文件 < 5MB：单次 `put_object()` 上传
   - 文件 ≥ 5MB：启动 Multipart Upload（`create_multipart_upload`），按 8MB 分片并发上传（最多 4 个并发 part），完成后 `complete_multipart_upload`
   - 每上传完一个分片，通过 Tauri 事件 `s3://transfer-progress/{transfer_id}` 推送 `{ transferred, total, speed_bps }`
-- [ ] `cmd_s3_upload_folder(conn_id, bucket, prefix, local_dir) -> Result<String>`（返回 batch_id）：遍历本地目录，为每个文件生成独立 transfer_id，所有任务并发度限制为 4
-- [ ] `cmd_s3_cancel_upload(transfer_id) -> Result<()>`：中止 Multipart Upload（调用 `abort_multipart_upload`）
+- [x] `cmd_s3_upload_folder(conn_id, bucket, prefix, local_dir) -> Result<String>`（返回 batch_id）：遍历本地目录，为每个文件生成独立 transfer_id，所有任务并发度限制为 4
+- [x] `cmd_s3_cancel_upload(transfer_id) -> Result<()>`：中止 Multipart Upload（调用 `abort_multipart_upload`）
 
 ### 16.2 Rust 后端 - 下载
-- [ ] `cmd_s3_download_object(conn_id, bucket, key, local_path, version_id?) -> Result<String>`（返回 transfer_id）：
+- [x] `cmd_s3_download_object(conn_id, bucket, key, local_path, version_id?) -> Result<String>`（返回 transfer_id）：
   - 调用 `get_object()`，流式写入本地文件
   - 每 256KB 推送一次进度事件
-- [ ] `cmd_s3_download_objects(conn_id, bucket, keys: Vec<String>, local_dir) -> Result<String>`（批量下载，返回 batch_id）：保留对象键的相对路径结构，并发度 4
-- [ ] `cmd_s3_download_folder(conn_id, bucket, prefix, local_dir) -> Result<String>`：列出前缀下所有对象后批量下载，递归保留目录结构
-- [ ] `cmd_s3_cancel_download(transfer_id) -> Result<()>`
+- [x] `cmd_s3_download_objects(conn_id, bucket, keys: Vec<String>, local_dir) -> Result<String>`（批量下载，返回 batch_id）：保留对象键的相对路径结构，并发度 4
+- [x] `cmd_s3_download_folder(conn_id, bucket, prefix, local_dir) -> Result<String>`：列出前缀下所有对象后批量下载，递归保留目录结构
+- [x] `cmd_s3_cancel_download(transfer_id) -> Result<()>`
 
 ### 16.3 前端 - 拖放上传
 - [ ] `UploadDropzone.tsx`：对象列表区域整体作为 drop zone（使用 `react-dropzone`）
@@ -868,25 +868,25 @@ src-tauri/src/plugins/s3/
 ## Phase 17：对象预览与预签名 URL
 
 ### 17.1 Rust 后端 - 对象内容读取
-- [ ] `cmd_s3_get_object_text(conn_id, bucket, key, version_id?) -> Result<String>`：读取对象内容为字符串（限 2MB，超出报错）
-- [ ] `cmd_s3_get_object_bytes(conn_id, bucket, key, version_id?) -> Result<Vec<u8>>`：读取二进制内容（限 10MB，图片/PDF 预览用）
-- [ ] `cmd_s3_generate_presigned_url(conn_id, bucket, key, expires_secs: u64, version_id?) -> Result<String>`：
+- [x] `cmd_s3_get_object_text(conn_id, bucket, key, version_id?) -> Result<String>`：读取对象内容为字符串（限 2MB，超出报错）
+- [x] `cmd_s3_get_object_bytes(conn_id, bucket, key, version_id?) -> Result<Vec<u8>>`：读取二进制内容（限 10MB，图片/PDF 预览用）
+- [x] `cmd_s3_generate_presigned_url(conn_id, bucket, key, expires_secs: u64, version_id?) -> Result<String>`：
   - 使用 `aws_sdk_s3::presigning::PresigningConfig` 生成预签名 GET URL
   - 支持设置过期时间（1分钟 ~ 7天）
 
 ### 17.2 前端 - 对象预览
-- [ ] `ObjectPreview.tsx`：Modal 或右侧抽屉展示对象内容，根据 Content-Type 选择渲染方式：
+- [x] `ObjectPreview.tsx`：Modal 或右侧抽屉展示对象内容，根据 Content-Type 选择渲染方式：
   - **图片**（`image/*`）：`<img>` 标签直接渲染（base64 或 presigned URL）
   - **视频**（`video/*`）：`<video>` 标签 + 预签名 URL 流式播放
   - **音频**（`audio/*`）：`<audio>` 标签 + 播放控件
   - **PDF**（`application/pdf`）：`react-pdf` 渲染，支持翻页
   - **文本/代码**（`text/*`、`application/json`、`application/xml` 等）：`shiki` 代码高亮，自动检测语言
   - **其他**：显示"无法预览，请下载后查看"+ 下载按钮
-- [ ] 预览 Modal 顶部显示：对象键名、大小、Content-Type；操作按钮：下载、复制预签名 URL
+- [x] 预览 Modal 顶部显示：对象键名、大小、Content-Type；操作按钮：下载、复制预签名 URL
 
 ### 17.3 前端 - 预签名 URL 弹窗
-- [ ] `PresignedUrlModal.tsx`：选择过期时间（下拉：5分钟/1小时/1天/7天/自定义）、点击生成调用 `cmd_s3_generate_presigned_url`
-- [ ] 展示生成的 URL（只读文本框）、一键复制按钮
+- [x] `PresignedUrlModal.tsx`：选择过期时间（下拉：5分钟/1小时/1天/7天/自定义）、点击生成调用 `cmd_s3_generate_presigned_url`
+- [x] 展示生成的 URL（只读文本框）、一键复制按钮
 - [ ] 显示过期时间倒计时提示（"此链接将在 X 时间后失效"）
 
 ---
@@ -894,9 +894,9 @@ src-tauri/src/plugins/s3/
 ## Phase 18：高级功能
 
 ### 18.1 Rust 后端 - 存储桶策略
-- [ ] `cmd_s3_get_bucket_policy(conn_id, bucket) -> Result<String>`：返回 JSON 字符串（策略不存在时返回空字符串）
-- [ ] `cmd_s3_set_bucket_policy(conn_id, bucket, policy_json: String) -> Result<()>`：校验 JSON 格式后提交
-- [ ] `cmd_s3_delete_bucket_policy(conn_id, bucket) -> Result<()>`
+- [x] `cmd_s3_get_bucket_policy(conn_id, bucket) -> Result<String>`：返回 JSON 字符串（策略不存在时返回空字符串）
+- [x] `cmd_s3_set_bucket_policy(conn_id, bucket, policy_json: String) -> Result<()>`：校验 JSON 格式后提交
+- [x] `cmd_s3_delete_bucket_policy(conn_id, bucket) -> Result<()>`
 
 ### 18.2 Rust 后端 - 生命周期规则
 - [ ] `cmd_s3_get_lifecycle_rules(conn_id, bucket) -> Result<Vec<LifecycleRule>>`：解析 XML 响应为结构化数据
@@ -905,37 +905,37 @@ src-tauri/src/plugins/s3/
 - [ ] `cmd_s3_delete_lifecycle_rules(conn_id, bucket) -> Result<()>`
 
 ### 18.3 Rust 后端 - 对象标签
-- [ ] `cmd_s3_get_object_tags(conn_id, bucket, key) -> Result<Vec<Tag>>`
-- [ ] `cmd_s3_set_object_tags(conn_id, bucket, key, tags: Vec<Tag>) -> Result<()>`
-- [ ] `cmd_s3_delete_object_tags(conn_id, bucket, key) -> Result<()>`
+- [x] `cmd_s3_get_object_tags(conn_id, bucket, key) -> Result<Vec<Tag>>`
+- [x] `cmd_s3_set_object_tags(conn_id, bucket, key, tags: Vec<Tag>) -> Result<()>`
+- [x] `cmd_s3_delete_object_tags(conn_id, bucket, key) -> Result<()>`
 
 ### 18.4 Rust 后端 - 存储统计
-- [ ] `cmd_s3_get_bucket_stats(conn_id, bucket, prefix?) -> Result<BucketStats>`：
+- [x] `cmd_s3_get_bucket_stats(conn_id, bucket, prefix?) -> Result<BucketStats>`：
   - 遍历对象（分页 list），统计 `{ object_count, total_size, storage_class_breakdown: HashMap }`
   - 数量大时后台异步执行，通过事件 `s3://stats-progress/{task_id}` 推送中间结果
 
 ### 18.5 前端 - Bucket 设置页
-- [ ] `BucketSettings.tsx`：Tabs 页（概览 / 版本控制 / 生命周期 / 存储桶策略）
-- [ ] **概览 Tab**：显示 `BucketStats`（对象数量、总大小、存储类型分布饼图）、Region、创建时间
-- [ ] **版本控制 Tab**：Toggle 开启/暂停版本控制，显示当前状态说明
+- [x] `BucketSettings.tsx`：Tabs 页（概览 / 版本控制 / 生命周期 / 存储桶策略）
+- [x] **概览 Tab**：显示 `BucketStats`（对象数量、总大小、存储类型分布饼图）、Region、创建时间
+- [x] **版本控制 Tab**：Toggle 开启/暂停版本控制，显示当前状态说明
 - [ ] **生命周期 Tab**：规则列表（前缀、过期天数、转储类型）；支持新增/编辑/删除规则（Modal 表单：前缀、到期后删除天数、转 IA/Glacier 天数）
-- [ ] **存储桶策略 Tab**：`BucketPolicyEditor.tsx`，Monaco-like JSON 编辑器（使用 `shiki` 高亮），展示当前策略，支持格式化、校验、保存；提供常用策略模板下拉（公开读、私有、仅特定 IP）
+- [x] **存储桶策略 Tab**：`BucketPolicyEditor.tsx`，Monaco-like JSON 编辑器（使用 `shiki` 高亮），展示当前策略，支持格式化、校验、保存；提供常用策略模板下拉（公开读、私有、仅特定 IP）
 
 ### 18.6 前端 - 对象标签管理
-- [ ] `ObjectMetaDrawer.tsx` 增加"标签"折叠面板
-- [ ] 展示当前对象标签（key-value 表格），支持新增（行内输入）、删除（行末删除按钮）、保存
+- [x] `ObjectMetaDrawer.tsx` 增加"标签"折叠面板
+- [x] 展示当前对象标签（key-value 表格），支持新增（行内输入）、删除（行末删除按钮）、保存
 
 ---
 
 ## Phase 19：打包更新（第三期）
 
 ### 19.1 版本更新
-- [ ] `tauri.conf.json` 版本号升至 `0.3.0`
-- [ ] `Cargo.toml` 同步版本号
+- [x] `tauri.conf.json` 版本号升至 `0.3.0`
+- [x] `Cargo.toml` 同步版本号
 
 ### 19.2 CI/CD 更新
-- [ ] GitHub Actions 增加 `v0.3.*` tag 构建触发
-- [ ] Release Notes 模板增加 S3 功能说明
+- [x] GitHub Actions 增加 `v0.3.*` tag 构建触发
+- [x] Release Notes 模板增加 S3 功能说明
 
 ### 19.3 应用内更新
 - [ ] "关于"页版本历史增加 v0.3.0 条目
@@ -1013,3 +1013,7 @@ pm test。
 - 2026-04-29 13:20-13:31 发版流程建设：新增 .github/workflows/release.yml，在 * tag 触发时并行构建 Windows/macOS/Linux 包并自动上传到 GitHub Release；新增发布说明 docs/releases/v0.1.0.md；将 uild-desktop 标签触发调整为仅 workflow_dispatch + push main，避免与 release 工作流重复构建。
 
 - 2026-04-29 16:00-16:05 Redis KeyBrowser 交互增强：实现 Key Tree 与 Key Detail 可拖拽分栏，支持中线拖动实时调整宽度，并添加最小宽度保护（左 300px / 右 420px）与分割条高亮反馈。同步新增发版文档 docs/releases/v0.2.0.md。
+
+- 2026-05-07 Redis 遗留任务补齐：KeyTree 改为按冒号分段的层级树展示，搜索输入增加 300ms 防抖 SCAN，key 行补齐右键菜单（复制、查看详情、设置 TTL、重命名、删除）；Console 顶部补齐连接/DB 切换，并优化 Array 缩进与 Error 红色输出。
+
+- 2026-05-07 S3 第三期主链路补齐：扩展 S3 后端命令（Bucket region/versioning、对象版本/元数据、批量删除、复制/移动/重命名、上传/下载、预览、预签名 URL、Bucket Policy、对象标签、Bucket 统计），前端新增 ObjectList、ObjectMetaDrawer、ObjectPreview、PresignedUrlModal、BucketSettings，并将版本升至 v0.3.0，新增 docs/releases/v0.3.0.md。

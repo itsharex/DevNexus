@@ -1,24 +1,40 @@
-import { App, AutoComplete, Button, Card, Drawer, List, Modal, Space, Tag, Typography } from "antd";
+import { App, AutoComplete, Button, Card, Drawer, List, Modal, Select, Space, Typography } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Terminal } from "xterm";
 import "xterm/css/xterm.css";
 
 import { useConsoleStore } from "@/plugins/redis-manager/store/console";
+import { useConnectionsStore } from "@/plugins/redis-manager/store/connections";
 import { useWorkspaceStore } from "@/plugins/redis-manager/store/workspace";
 import type { RedisValue } from "@/plugins/redis-manager/types";
 
-function renderRedisValue(value: RedisValue): string {
+function renderRedisValue(value: RedisValue, depth = 0): string {
+  const indent = "  ".repeat(depth);
   if (value.kind === "nil") return "(nil)";
   if (value.kind === "int") return String(value.value);
   if (value.kind === "bulk") return value.value;
   if (value.kind === "error") return `ERR ${value.value}`;
-  return value.value.map(renderRedisValue).join("\n");
+  if (value.value.length === 0) return "(empty array)";
+  return value.value
+    .map((item, index) => `${indent}${index + 1}) ${renderRedisValue(item, depth + 1)}`)
+    .join("\n");
+}
+
+function renderTerminalValue(value: RedisValue): string {
+  const text = renderRedisValue(value);
+  return value.kind === "error" ? `\x1b[31m${text}\x1b[0m` : text;
 }
 
 export function ConsoleView() {
   const { message } = App.useApp();
   const connId = useWorkspaceStore((state) => state.activeConnectionId);
   const dbIndex = useWorkspaceStore((state) => state.activeDbIndex);
+  const setActiveConnectionId = useWorkspaceStore((state) => state.setActiveConnectionId);
+  const setActiveDbIndex = useWorkspaceStore((state) => state.setActiveDbIndex);
+  const connections = useConnectionsStore((state) => state.connections);
+  const connectedIds = useConnectionsStore((state) => state.connectedIds);
+  const selectDb = useConnectionsStore((state) => state.selectDb);
+  const fetchConnections = useConnectionsStore((state) => state.fetchConnections);
   const input = useConsoleStore((state) => state.input);
   const setInput = useConsoleStore((state) => state.setInput);
   const execute = useConsoleStore((state) => state.execute);
@@ -29,6 +45,17 @@ export function ConsoleView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const termContainerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
+
+  const connectionOptions = useMemo(
+    () =>
+      connections
+        .filter((item) => connectedIds.includes(item.id) || item.id === connId)
+        .map((item) => ({
+          label: `${item.name} (${item.host}:${item.port})`,
+          value: item.id,
+        })),
+    [connId, connectedIds, connections],
+  );
 
   const commandHints = useMemo(
     () => [
@@ -66,8 +93,9 @@ export function ConsoleView() {
     if (!connId) {
       return;
     }
+    void fetchConnections();
     void loadHistory(connId);
-  }, [connId, loadHistory]);
+  }, [connId, fetchConnections, loadHistory]);
 
   useEffect(() => {
     if (!termContainerRef.current) {
@@ -97,7 +125,7 @@ export function ConsoleView() {
     }
     const last = logs[logs.length - 1];
     termRef.current.writeln(`> ${last.command}`);
-    termRef.current.writeln(renderRedisValue(last.result));
+    termRef.current.writeln(renderTerminalValue(last.result));
   }, [logs]);
 
   const runCommand = (value: string, confirmDangerous = false) => {
@@ -137,8 +165,36 @@ export function ConsoleView() {
       title="Console"
       extra={
         <Space>
-          <Tag color="blue">{connId}</Tag>
-          <Tag>DB {dbIndex}</Tag>
+          <Select
+            size="small"
+            style={{ width: 260 }}
+            value={connId}
+            options={connectionOptions}
+            onChange={(nextConnId) => {
+              setActiveConnectionId(nextConnId);
+              const next = connections.find((item) => item.id === nextConnId);
+              setActiveDbIndex(next?.dbIndex ?? 0);
+              void loadHistory(nextConnId);
+            }}
+          />
+          <Select
+            size="small"
+            style={{ width: 92 }}
+            value={dbIndex}
+            options={Array.from({ length: 16 }, (_, idx) => ({
+              label: `DB ${idx}`,
+              value: idx,
+            }))}
+            onChange={(nextDbIndex) => {
+              void selectDb(connId, nextDbIndex)
+                .then(async () => {
+                  setActiveDbIndex(nextDbIndex);
+                  await fetchConnections();
+                  message.success(`Switched to DB ${nextDbIndex}`);
+                })
+                .catch((err: unknown) => message.error(String(err)));
+            }}
+          />
           <Button onClick={() => setDrawerOpen(true)}>History</Button>
         </Space>
       }
@@ -181,7 +237,11 @@ export function ConsoleView() {
             <List.Item>
               <Space direction="vertical" style={{ width: "100%" }}>
                 <Typography.Text code>{item.command}</Typography.Text>
-                <Typography.Text>{renderRedisValue(item.result)}</Typography.Text>
+                <Typography.Text type={item.result.kind === "error" ? "danger" : undefined}>
+                  <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                    {renderRedisValue(item.result)}
+                  </pre>
+                </Typography.Text>
               </Space>
             </List.Item>
           )}
