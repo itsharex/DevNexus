@@ -5,8 +5,11 @@ import type {
   S3BucketInfo,
   S3ConnectionFormData,
   S3ConnectionInfo,
+  S3DeleteObjectsResult,
   S3Latency,
   S3ListObjectsResult,
+  S3ObjectMeta,
+  S3ObjectTag,
 } from "@/plugins/s3-client/types";
 
 interface S3ConnectionsState {
@@ -47,12 +50,86 @@ interface S3ConnectionsState {
     key: string;
     prefix?: string;
   }) => Promise<void>;
+  deleteObjects: (args: {
+    connId: string;
+    bucket: string;
+    keys: string[];
+    prefix?: string;
+  }) => Promise<S3DeleteObjectsResult>;
+  deleteFolder: (args: {
+    connId: string;
+    bucket: string;
+    folderPrefix: string;
+    prefix?: string;
+  }) => Promise<S3DeleteObjectsResult>;
+  copyObject: (args: {
+    connId: string;
+    srcBucket: string;
+    srcKey: string;
+    dstBucket: string;
+    dstKey: string;
+    prefix?: string;
+  }) => Promise<void>;
+  renameObject: (args: {
+    connId: string;
+    bucket: string;
+    oldKey: string;
+    newKey: string;
+    prefix?: string;
+  }) => Promise<void>;
+  headObject: (args: {
+    connId: string;
+    bucket: string;
+    key: string;
+  }) => Promise<S3ObjectMeta>;
+  getObjectTags: (args: {
+    connId: string;
+    bucket: string;
+    key: string;
+  }) => Promise<S3ObjectTag[]>;
+  setObjectTags: (args: {
+    connId: string;
+    bucket: string;
+    key: string;
+    tags: S3ObjectTag[];
+  }) => Promise<void>;
   createFolder: (args: {
     connId: string;
     bucket: string;
     prefix: string;
     folderName: string;
   }) => Promise<void>;
+  uploadFile: (args: {
+    connId: string;
+    bucket: string;
+    key: string;
+    localPath: string;
+    prefix?: string;
+  }) => Promise<string>;
+  uploadFolder: (args: {
+    connId: string;
+    bucket: string;
+    prefix: string;
+    localDir: string;
+  }) => Promise<string>;
+  downloadObject: (args: {
+    connId: string;
+    bucket: string;
+    key: string;
+    localPath: string;
+  }) => Promise<string>;
+  downloadFolder: (args: {
+    connId: string;
+    bucket: string;
+    folderPrefix: string;
+    localDir: string;
+  }) => Promise<string>;
+  generatePresignedUrl: (args: {
+    connId: string;
+    bucket: string;
+    key: string;
+    expiresSecs: number;
+  }) => Promise<string>;
   setWorkspaceTab: (tab: "connections" | "buckets" | "objects") => void;
   setActive: (id: string | null) => void;
 }
@@ -181,6 +258,87 @@ export const useS3ConnectionsStore = create<S3ConnectionsState>()((set) => ({
       nextToken: result.nextToken ?? null,
     });
   },
+  deleteObjects: async ({ connId, bucket, keys, prefix }) => {
+    const result = await invoke<S3DeleteObjectsResult>("cmd_s3_delete_objects", {
+      connId,
+      bucket,
+      keys,
+    });
+    const refreshed = await invoke<S3ListObjectsResult>("cmd_s3_list_objects", {
+      connId,
+      bucket,
+      prefix: prefix ?? "",
+      continuationToken: null,
+      maxKeys: 200,
+    });
+    set({
+      objects: refreshed.objects,
+      commonPrefixes: refreshed.commonPrefixes,
+      nextToken: refreshed.nextToken ?? null,
+    });
+    return result;
+  },
+  deleteFolder: async ({ connId, bucket, folderPrefix, prefix }) => {
+    const result = await invoke<S3DeleteObjectsResult>("cmd_s3_delete_folder", {
+      connId,
+      bucket,
+      prefix: folderPrefix,
+    });
+    const refreshed = await invoke<S3ListObjectsResult>("cmd_s3_list_objects", {
+      connId,
+      bucket,
+      prefix: prefix ?? "",
+      continuationToken: null,
+      maxKeys: 200,
+    });
+    set({
+      objects: refreshed.objects,
+      commonPrefixes: refreshed.commonPrefixes,
+      nextToken: refreshed.nextToken ?? null,
+    });
+    return result;
+  },
+  copyObject: async ({ connId, srcBucket, srcKey, dstBucket, dstKey, prefix }) => {
+    await invoke("cmd_s3_copy_object", { connId, srcBucket, srcKey, dstBucket, dstKey });
+    const refreshed = await invoke<S3ListObjectsResult>("cmd_s3_list_objects", {
+      connId,
+      bucket: dstBucket,
+      prefix: prefix ?? "",
+      continuationToken: null,
+      maxKeys: 200,
+    });
+    set({
+      objects: refreshed.objects,
+      commonPrefixes: refreshed.commonPrefixes,
+      nextToken: refreshed.nextToken ?? null,
+    });
+  },
+  renameObject: async ({ connId, bucket, oldKey, newKey, prefix }) => {
+    await invoke("cmd_s3_rename_object", { connId, bucket, oldKey, newKey });
+    const refreshed = await invoke<S3ListObjectsResult>("cmd_s3_list_objects", {
+      connId,
+      bucket,
+      prefix: prefix ?? "",
+      continuationToken: null,
+      maxKeys: 200,
+    });
+    set({
+      objects: refreshed.objects,
+      commonPrefixes: refreshed.commonPrefixes,
+      nextToken: refreshed.nextToken ?? null,
+    });
+  },
+  headObject: ({ connId, bucket, key }) =>
+    invoke<S3ObjectMeta>("cmd_s3_head_object", {
+      connId,
+      bucket,
+      key,
+      versionId: null,
+    }),
+  getObjectTags: ({ connId, bucket, key }) =>
+    invoke<S3ObjectTag[]>("cmd_s3_get_object_tags", { connId, bucket, key }),
+  setObjectTags: ({ connId, bucket, key, tags }) =>
+    invoke("cmd_s3_set_object_tags", { connId, bucket, key, tags }),
   createFolder: async ({ connId, bucket, prefix, folderName }) => {
     const name = folderName.trim();
     if (!name) {
@@ -202,6 +360,72 @@ export const useS3ConnectionsStore = create<S3ConnectionsState>()((set) => ({
       nextToken: result.nextToken ?? null,
     });
   },
+  uploadFile: async ({ connId, bucket, key, localPath, prefix }) => {
+    const id = await invoke<string>("cmd_s3_upload_file", {
+      connId,
+      bucket,
+      key,
+      localPath,
+      storageClass: null,
+    });
+    const refreshed = await invoke<S3ListObjectsResult>("cmd_s3_list_objects", {
+      connId,
+      bucket,
+      prefix: prefix ?? "",
+      continuationToken: null,
+      maxKeys: 200,
+    });
+    set({
+      objects: refreshed.objects,
+      commonPrefixes: refreshed.commonPrefixes,
+      nextToken: refreshed.nextToken ?? null,
+    });
+    return id;
+  },
+  uploadFolder: async ({ connId, bucket, prefix, localDir }) => {
+    const id = await invoke<string>("cmd_s3_upload_folder", {
+      connId,
+      bucket,
+      prefix,
+      localDir,
+    });
+    const refreshed = await invoke<S3ListObjectsResult>("cmd_s3_list_objects", {
+      connId,
+      bucket,
+      prefix,
+      continuationToken: null,
+      maxKeys: 200,
+    });
+    set({
+      objects: refreshed.objects,
+      commonPrefixes: refreshed.commonPrefixes,
+      nextToken: refreshed.nextToken ?? null,
+    });
+    return id;
+  },
+  downloadObject: ({ connId, bucket, key, localPath }) =>
+    invoke<string>("cmd_s3_download_object", {
+      connId,
+      bucket,
+      key,
+      localPath,
+      versionId: null,
+    }),
+  downloadFolder: ({ connId, bucket, folderPrefix, localDir }) =>
+    invoke<string>("cmd_s3_download_folder", {
+      connId,
+      bucket,
+      prefix: folderPrefix,
+      localDir,
+    }),
+  generatePresignedUrl: ({ connId, bucket, key, expiresSecs }) =>
+    invoke<string>("cmd_s3_generate_presigned_url", {
+      connId,
+      bucket,
+      key,
+      expiresSecs,
+      versionId: null,
+    }),
   setWorkspaceTab: (workspaceTab) => set({ workspaceTab }),
   setActive: (activeConnId) => set({ activeConnId }),
 }));

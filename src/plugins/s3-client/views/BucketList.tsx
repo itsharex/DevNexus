@@ -14,6 +14,7 @@ import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 
 import { useS3ConnectionsStore } from "@/plugins/s3-client/store/s3-connections";
+import { BucketSettings } from "@/plugins/s3-client/components/BucketSettings";
 
 export function BucketList() {
   const { message } = App.useApp();
@@ -30,6 +31,7 @@ export function BucketList() {
   const setWorkspaceTab = useS3ConnectionsStore((state) => state.setWorkspaceTab);
   const [createOpen, setCreateOpen] = useState(false);
   const [newBucketName, setNewBucketName] = useState("");
+  const [settingsBucket, setSettingsBucket] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -133,6 +135,9 @@ export function BucketList() {
                 >
                   Open
                 </Button>
+                <Button type="link" onClick={() => setSettingsBucket(record.name)}>
+                  Settings
+                </Button>
                 <Popconfirm
                   title={`Delete bucket ${record.name}?`}
                   description="Bucket must be empty before delete."
@@ -174,6 +179,12 @@ export function BucketList() {
           onChange={(event) => setNewBucketName(event.target.value)}
         />
       </Modal>
+      <BucketSettings
+        open={Boolean(settingsBucket)}
+        connId={activeConnId}
+        bucket={settingsBucket}
+        onClose={() => setSettingsBucket(null)}
+      />
     </Card>
   );
 }
