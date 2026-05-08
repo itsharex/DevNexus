@@ -145,8 +145,32 @@ pub fn run() {
             plugins::mongodb::commands::cmd_mongo_pick_import_file,
             plugins::mongodb::commands::cmd_mongo_preview_import_file,
             plugins::mongodb::commands::cmd_mongo_import_documents,
-            plugins::mongodb::commands::cmd_mongo_get_server_status
+            plugins::mysql::commands::cmd_mysql_list_connections,
+            plugins::mysql::commands::cmd_mysql_save_connection,
+            plugins::mysql::commands::cmd_mysql_delete_connection,
+            plugins::mysql::commands::cmd_mysql_test_connection,
+            plugins::mysql::commands::cmd_mysql_connect,
+            plugins::mysql::commands::cmd_mysql_disconnect,
+            plugins::mysql::commands::cmd_mysql_list_databases,
+            plugins::mysql::commands::cmd_mysql_list_tables,
+            plugins::mysql::commands::cmd_mysql_describe_table,
+            plugins::mysql::commands::cmd_mysql_get_table_status,
+            plugins::mysql::commands::cmd_mysql_select_rows,
+            plugins::mysql::commands::cmd_mysql_insert_row,
+            plugins::mysql::commands::cmd_mysql_update_row,
+            plugins::mysql::commands::cmd_mysql_delete_row,
+            plugins::mysql::commands::cmd_mysql_execute_sql,
+            plugins::mysql::commands::cmd_mysql_list_query_history,
+            plugins::mysql::commands::cmd_mysql_list_indexes,
+            plugins::mysql::commands::cmd_mysql_create_index,
+            plugins::mysql::commands::cmd_mysql_drop_index,
+            plugins::mysql::commands::cmd_mysql_export_rows,
+            plugins::mysql::commands::cmd_mysql_pick_import_file,
+            plugins::mysql::commands::cmd_mysql_preview_import_file,
+            plugins::mysql::commands::cmd_mysql_import_rows,
+            plugins::mysql::commands::cmd_mysql_get_server_status,            plugins::mongodb::commands::cmd_mongo_get_server_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

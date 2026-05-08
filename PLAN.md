@@ -1086,6 +1086,105 @@ src-tauri/src/plugins/s3/
 
 ---
 
+
+---
+
+# 第五期：MySQL 数据库连接工具插件
+
+> 目标：新增 `mysql-client` 插件，只实现 MySQL 数据库连接工具，提供连接管理、库表浏览、表数据 CRUD、SQL 查询、索引管理、导入导出和基础 Server 状态能力。
+
+---
+
+## 第五期技术选型增量
+
+| 新增项 | 方案 | 说明 |
+|--------|------|------|
+| MySQL 客户端 | `mysql_async` | Tokio async，适合 Tauri 后端异步 command |
+| 数据展示 | JSON 行模型 | 后端将 MySQL Row 转为前端可渲染 JSON，避免动态列类型绑定复杂化 |
+| 本地存储 | SQLite + AES-GCM | 沿用现有连接配置与敏感字段加密策略 |
+
+---
+
+## Phase 27：MySQL 插件脚手架与连接管理
+
+### 27.1 Rust 后端 - 数据结构与连接配置
+- [x] `Cargo.toml` 增加 `mysql_async` 依赖
+- [x] `db/init.rs` 增加 `mysql_connections` 表
+- [x] 新增 `db/mysql_connection_repo.rs`：连接配置 CRUD，password 加密存储
+- [x] 连接字段：host、port、username、password、default_database、charset、ssl_mode、connect_timeout
+
+### 27.2 Rust 后端 - Pool 与 Commands
+- [x] 新增 `plugins/mysql/{mod,types,client_pool,commands}.rs`
+- [x] `client_pool.rs`：按 connection id 缓存 MySQL Pool
+- [x] `cmd_mysql_test_connection(form) -> MysqlLatency`
+- [x] `cmd_mysql_connect(id)` / `cmd_mysql_disconnect(id)`
+- [x] `cmd_mysql_list/save/delete_connections`
+
+### 27.3 前端 - 插件注册与连接页
+- [x] 新增 `src/plugins/mysql-client/index.tsx` 并注册到 builtin plugins
+- [x] 新增 `types.ts`、`store/mysql-connections.ts`
+- [x] 新增 `MysqlConnectionList.tsx` 与 `MysqlConnectionForm.tsx`
+- [x] 连接成功后自动跳转 `Databases`
+
+---
+
+## Phase 28：数据库与表浏览
+
+- [x] `cmd_mysql_list_databases(conn_id)`：列出库并默认过滤系统库
+- [x] `cmd_mysql_list_tables(conn_id, database)`：列出表/视图
+- [x] `cmd_mysql_describe_table(conn_id, database, table)`：列信息、主键信息
+- [x] `cmd_mysql_get_table_status(conn_id, database, table)`：表行数、引擎、大小等概要
+- [x] 前端新增 `DatabaseBrowser.tsx`：数据库列表、表列表、表概要，点击表自动跳转 `Table Data`
+
+---
+
+## Phase 29：表数据浏览与 CRUD
+
+- [x] `cmd_mysql_select_rows(conn_id, database, table, offset, limit)`：分页读取表数据
+- [x] `cmd_mysql_insert_row(conn_id, database, table, row_json)`
+- [x] `cmd_mysql_update_row(conn_id, database, table, pk_json, row_json)`
+- [x] `cmd_mysql_delete_row(conn_id, database, table, pk_json)`
+- [x] 无主键表只读浏览，不提供行级编辑/删除
+- [x] 前端新增 `TableData.tsx`：分页表格、新增、编辑、删除
+
+---
+
+## Phase 30：SQL 查询工作区
+
+- [x] `cmd_mysql_execute_sql(conn_id, database?, sql)`：执行 SELECT/SHOW/DESCRIBE/EXPLAIN/INSERT/UPDATE/DELETE
+- [x] `cmd_mysql_list_query_history(conn_id?, limit?)`
+- [x] 危险 SQL 识别：DROP/TRUNCATE/ALTER、DELETE/UPDATE 无 WHERE 前端二次确认
+- [x] 前端新增 `SqlWorkspace.tsx`：SQL 编辑、表格/JSON 结果、历史记录重跑
+
+---
+
+## Phase 31：索引管理
+
+- [x] `cmd_mysql_list_indexes(conn_id, database, table)`
+- [x] `cmd_mysql_create_index(conn_id, database, table, index_name, columns, unique)`
+- [x] `cmd_mysql_drop_index(conn_id, database, table, index_name)`
+- [x] 前端新增 `IndexManager.tsx`
+
+---
+
+## Phase 32：导入导出
+
+- [x] `cmd_mysql_export_rows(conn_id, database, table, format)`：导出 JSON/CSV 到应用数据目录
+- [x] `cmd_mysql_pick_import_file` / `cmd_mysql_preview_import_file`
+- [x] `cmd_mysql_import_rows(conn_id, database, table, file_path, mode)`：支持 insertOnly / replaceInto
+- [x] 前端新增 `ImportExport.tsx`
+
+---
+
+## Phase 33：Server 信息与发布
+
+- [x] `cmd_mysql_get_server_status(conn_id)`：版本、uptime、threads、connections、queries 等基础指标
+- [x] 新增 `ServerStatus.tsx`，支持窗口缩放后的滚动
+- [x] 版本升至 `0.5.0`
+- [x] README 增加 MySQL 插件说明
+- [x] 新增 `docs/releases/v0.5.0.md`
+- [x] 运行 `npm test`、`cargo check`、`npm run build`、`npm run tauri build -- --bundles nsis`
+
 ## 开发进度（实时）
 
 ### 2026-04-27
@@ -1144,6 +1243,12 @@ src-tauri/src/plugins/s3/
 
 ### 2026-05-08
 
+
+- 12:00-12:05 启动第五期 MySQL 数据库连接工具插件开发：已将 Phase 27-33 详细计划写入 `PLAN.md`，开始按 MongoDB 插件模式实现 MySQL 后端与前端闭环。
+- 13:05-18:25 完成第五期验证与 Windows 打包：`npm test` 通过，`npm run tauri build -- --bundles nsis` 生成 `DevNexus_0.5.0_x64-setup.exe`；打包命令因超时未返回完整日志，但产物时间戳与 release exe 已确认。
+- 12:48-13:05 完成第五期集成修正：修复 MySQL 依赖接入、前端类型构建问题；`npm run build` 通过，`cargo check` 通过（保留既有 RedisConnectionType 未使用告警）。
+- 12:30-12:48 完成 MySQL 前端主链路初版：新增 `mysql-client` 插件、连接表单/列表、数据库表浏览、Table Data、SQL、Indexes、Import/Export、Server 页面，并注册到内置插件。
+- 12:05-12:30 完成 MySQL 后端主链路初版：新增 `mysql_connections`/`mysql_query_history` 表、连接配置加密 repo、MySQL pool、Tauri commands，覆盖连接、库表、数据 CRUD、SQL、索引、导入导出与 Server 状态。
 - 09:00-09:16 修复 Redis Server 页面缩放后不能滚动：Redis 工作区改为固定高度 flex，Server 页面增加独立纵向/横向滚动容器，避免窗口缩放后下方内容不可见。
 - 09:30-09:40 完成第四期 MongoDB 插件详细规划写入 `PLAN.md`，新增 Phase 20-26 任务拆分。
 - 09:40-10:05 完成 MongoDB 后端基础：新增 `mongodb_connections`/`mongodb_query_history` 表、连接配置加密 repo、MongoDB client pool、Tauri commands，并通过 `cargo check` 验证。
@@ -1151,5 +1256,9 @@ src-tauri/src/plugins/s3/
 - 10:35-10:56 完成第四期发布配套与验证：版本升至 `0.4.0`，新增 `docs/releases/v0.4.0.md`，README 增加 MongoDB 插件说明；`cargo check`、`npm test`、`npm run build`、`npm run tauri build -- --bundles nsis` 均通过，生成 `DevNexus_0.4.0_x64-setup.exe`。
 - 11:00-11:05 优化 MongoDB Connections 标签尺寸：状态、默认数据库、TLS、SRV 标签改为小号样式，仅作用于 MongoDB 连接卡片；`npm run build` 验证通过。
 - 11:49-11:56 执行 v0.4.0 发布前验证与打包：`npm test`、`cargo check`、`npm run build`、`npm run tauri build -- --bundles nsis` 通过，重新生成 `DevNexus_0.4.0_x64-setup.exe`，准备提交并推送 `v0.4.0` tag 触发 GitHub Release。
+
+
+
+
 
 

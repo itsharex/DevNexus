@@ -135,9 +135,32 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
           content TEXT NOT NULL,
           executed_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS mysql_connections (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          group_name TEXT,
+          host TEXT NOT NULL,
+          port INTEGER NOT NULL DEFAULT 3306,
+          username TEXT NOT NULL,
+          password_encrypted TEXT,
+          default_database TEXT,
+          charset TEXT NOT NULL DEFAULT 'utf8mb4',
+          ssl_mode TEXT NOT NULL DEFAULT 'preferred',
+          connect_timeout INTEGER NOT NULL DEFAULT 10,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS mysql_query_history (
+          id TEXT PRIMARY KEY NOT NULL,
+          connection_id TEXT NOT NULL,
+          database_name TEXT,
+          sql_text TEXT NOT NULL,
+          executed_at TEXT NOT NULL
+        );
         "#,
     )
     .map_err(|err| format!("failed to initialize schema: {err}"))?;
 
     Ok(db_path)
 }
+
