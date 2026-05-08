@@ -956,6 +956,136 @@ src-tauri/src/plugins/s3/
 
 ---
 
+# 第四期：MongoDB 连接工具插件
+
+> 目标：新增 `mongodb-client` 插件，提供 MongoDB 连接管理、数据库/集合浏览、文档 CRUD、查询/聚合、索引管理、导入导出和基础服务器状态能力。
+
+---
+
+## 第四期技术选型增量
+
+| 新增项 | 方案 | 说明 |
+|--------|------|------|
+| MongoDB 客户端 | `mongodb` Rust 官方驱动 | Tokio async，支持 URI、认证、TLS、Replica Set/SRV 连接串 |
+| BSON/JSON | `bson` / MongoDB Extended JSON | 保留 ObjectId、Date、Decimal128 等 MongoDB 类型语义 |
+| 文档编辑 | JSON 编辑 + 格式化/校验 | 第一版不做复杂表格行内编辑，降低嵌套结构误操作 |
+| 本地存储 | SQLite + AES-GCM | 沿用现有连接配置与敏感字段加密策略 |
+
+---
+
+## Phase 20：MongoDB 插件脚手架与连接管理
+
+### 20.1 Rust 后端 - 数据结构与连接配置
+- [x] `Cargo.toml` 增加 `mongodb` 依赖
+- [x] `db/init.rs` 增加 `mongodb_connections` 表
+- [x] 新增 `db/mongodb_connection_repo.rs`：连接配置 CRUD，URI/password 加密存储
+- [x] 支持连接模式：`uri` / `form`
+- [x] 表单连接字段：host、port、username、password、auth_database、default_database、replica_set、tls、srv
+
+### 20.2 Rust 后端 - Client 池与 Commands
+- [x] 新增 `plugins/mongodb/{mod,types,client_pool,commands}.rs`
+- [x] `client_pool.rs`：按 connection id 缓存 `mongodb::Client`
+- [x] `cmd_mongo_test_connection(form) -> MongoLatency`：临时构造 client，执行 `ping`
+- [x] `cmd_mongo_connect(id)`：读取配置与密文，建立 client 并存入池
+- [x] `cmd_mongo_disconnect(id)`：从池移除 client
+- [x] `cmd_mongo_list/save/delete_connections`
+
+### 20.3 前端 - 插件注册与连接页
+- [x] 新增 `src/plugins/mongodb-client/index.tsx` 并注册到 builtin plugins
+- [x] 新增 `types.ts`、`store/mongodb-connections.ts`
+- [x] 新增 `MongoConnectionList.tsx`：分组连接卡片、搜索、新建、编辑、删除、双击连接
+- [x] 新增 `MongoConnectionForm.tsx`：URI/表单模式切换、测试连接、TLS/SRV/Replica Set 配置
+- [x] 连接成功后自动跳转 `Databases`
+
+---
+
+## Phase 21：数据库与集合浏览
+
+### 21.1 Rust 后端
+- [x] `cmd_mongo_list_databases(conn_id) -> Vec<MongoDatabaseInfo>`
+- [x] `cmd_mongo_list_collections(conn_id, database) -> Vec<MongoCollectionInfo>`
+- [x] `cmd_mongo_get_collection_stats(conn_id, database, collection) -> MongoCollectionStats`
+- [x] `cmd_mongo_create_collection(conn_id, database, collection)`
+- [x] `cmd_mongo_drop_collection(conn_id, database, collection)`
+
+### 21.2 前端
+- [x] 新增 `DatabaseBrowser.tsx`
+- [x] 左侧数据库列表，中间集合列表，右侧统计卡片
+- [x] 点击集合自动设置 active database/collection 并跳转 `Documents`
+- [x] 支持刷新、创建集合、删除集合二次确认
+
+---
+
+## Phase 22：文档浏览与 CRUD
+
+### 22.1 Rust 后端
+- [x] `cmd_mongo_find_documents(conn_id, database, collection, filter_json, projection_json?, sort_json?, skip, limit)`
+- [x] `cmd_mongo_count_documents(conn_id, database, collection, filter_json)`
+- [x] `cmd_mongo_insert_document(conn_id, database, collection, document_json)`
+- [x] `cmd_mongo_update_document(conn_id, database, collection, id_json, document_json)`
+- [x] `cmd_mongo_delete_documents(conn_id, database, collection, filter_json)`
+- [x] 返回 Extended JSON 字符串，避免 MongoDB 特殊类型丢失
+
+### 22.2 前端
+- [x] 新增 `DocumentBrowser.tsx`
+- [x] 顶部 filter/projection/sort JSON 输入区，默认 limit=50 分页
+- [x] 文档列表支持 JSON 预览、复制、编辑、删除、批量删除
+- [x] 新增/编辑文档使用 JSON 编辑器，保存前格式化与校验
+- [x] `_id` 默认只读，更新时不允许修改 `_id`
+
+---
+
+## Phase 23：查询与聚合控制台
+
+### 23.1 Rust 后端
+- [x] `cmd_mongo_run_find_query`
+- [x] `cmd_mongo_run_aggregate`
+- [x] `cmd_mongo_run_database_command`
+- [x] `cmd_mongo_list_query_history`
+- [x] 新增 `mongodb_query_history` 表
+- [x] 危险命令识别：drop/dropDatabase/deleteMany({})/updateMany({})/shutdown 等需要前端二次确认
+
+### 23.2 前端
+- [x] 新增 `QueryWorkspace.tsx`
+- [x] 查询类型：Find / Aggregate / Command
+- [x] 结果支持表格视图与 JSON 视图
+- [x] 历史记录抽屉支持一键重跑
+
+---
+
+## Phase 24：索引管理
+
+- [x] `cmd_mongo_list_indexes(conn_id, database, collection)`
+- [x] `cmd_mongo_create_index(conn_id, database, collection, keys_json, options_json)`
+- [x] `cmd_mongo_drop_index(conn_id, database, collection, index_name)`
+- [x] 新增 `IndexManager.tsx`：展示索引名、keys、unique、sparse、TTL、大小
+- [x] 新建索引 Modal 支持 keys JSON、name、unique、sparse、expireAfterSeconds
+
+---
+
+## Phase 25：导入导出
+
+- [x] `cmd_mongo_export_documents(conn_id, database, collection, filter_json, format)`
+- [x] `cmd_mongo_import_documents(conn_id, database, collection, file_path, mode)`
+- [x] 支持 JSON Array 与 JSON Lines
+- [x] 导入模式：insertOnly / upsertById / replaceById
+- [x] 新增 `ImportExport.tsx`：导出当前查询/集合，导入前预览前 20 条，展示导入结果
+
+---
+
+## Phase 26：Server 信息与发布
+
+- [x] `cmd_mongo_get_server_status`
+- [x] `cmd_mongo_get_build_info`（通过 `buildInfo` 集成到 Server Status）
+- [x] 新增 `ServerStatus.tsx`：版本、连接数、内存、opcounters 状态
+- [x] Server 页面必须支持窗口缩放后的上下/左右滚动
+- [x] 版本升至 `0.4.0`
+- [x] 新增 `docs/releases/v0.4.0.md`
+- [x] README 增加 MongoDB 插件说明
+- [x] 运行 `npm test`、`npm run build`、`cargo check`、`npm run tauri build -- --bundles nsis`
+
+---
+
 ## 开发进度（实时）
 
 ### 2026-04-27
@@ -988,32 +1118,38 @@ src-tauri/src/plugins/s3/
 - 15:16-15:19 完成最终验证与打包：`cargo check` 通过、`npm run build` 通过、`npm test` 通过，并生成 NSIS 安装包 `src-tauri/target/release/bundle/nsis/RDMM_0.1.0_x64-setup.exe`。
 - 15:25-15:32 完成品牌图标升级：新增抽象几何科技风 SVG 母版 `src-tauri/icons/app-icon.svg`，使用 `tauri icon` 生成并覆盖全套平台图标（`icon.ico`/`icon.icns`/PNG/Appx/iOS/Android 资产），用于应用窗口与安装包统一视觉。
 - 16:25-16:38 执行清理后重打包：清理 `dist` 与 `src-tauri/target` 旧产物（含 installer/exe 输出），基于新图标资源重新执行 `npm run tauri build -- --bundles nsis`，生成全新安装包并确认时间戳更新（16:37）。
-- 2026-04-28 16:50-16:59 修复 Windows 无边框窗口交互：标题栏拖拽改为显式 `startDragging()`，新增窗口四边与四角 resize 命中层并调用 `startResizeDragging()`，同时补充 capability 权限 `allow-start-dragging/allow-start-resize-dragging`，恢复窗口移动与放大缩小能力。
-- 2026-04-28 17:24-17:26 修复标题栏双击行为：在拖拽区增加 `onDoubleClick -> toggleMaximize()`，并在 `onMouseDown` 中跳过双击场景（`event.detail > 1`），避免拖拽与双击全屏/还原冲突。
-- 2026-04-28 19:20-19:54 启动第三期 Phase 13：完成 S3 插件连接管理闭环。后端新增 `s3_connections` 表、`db/s3_connection_repo.rs`、`plugins/s3/{mod,types,client_pool,commands}.rs`，并在 `lib.rs` 注册 `cmd_s3_list/save/delete/test/connect/disconnect`；前端新增 `s3-client` 插件（`index.tsx`、`types.ts`、`store/s3-connections.ts`、`views/S3ConnectionList.tsx`、`components/S3ConnectionForm.tsx`）并接入插件注册表。已完成验证：`cargo check`、`npm run build`、`npm test` 通过。
-- 2026-04-28 20:20-20:37 继续第三期 Phase 14 起步：后端新增 `cmd_s3_list_buckets(conn_id)`（连接后列出 Bucket）；前端新增 `BucketList.tsx` 并在 `s3-client/index.tsx` 增加 Connections/Buckets 分段导航，连接后自动加载 Bucket 列表。验证通过：`cargo check`、`npm run build`、`npm test`。
-- 2026-04-28 20:50-21:13 推进 Phase 14：补齐 `cmd_s3_create_bucket`、`cmd_s3_delete_bucket` 并注册到 Tauri；前端 `BucketList.tsx` 增加新建 Bucket Modal 与删除确认操作，连接后可直接完成 Bucket 列表刷新、新建、删除闭环。验证通过：`cargo check`、`npm run build`、`npm test`。
-- 2026-04-28 21:40-22:06 推进 Phase 15 基础对象浏览：后端新增 `cmd_s3_list_objects`（prefix + delimiter + continuation token 分页），并补充 `cmd_s3_delete_object`、`cmd_s3_create_folder`；前端新增 `ObjectBrowser.tsx`，支持目录进入、前缀刷新、加载更多、文件删除、新建文件夹，形成“连接 -> Bucket -> 对象”基础闭环。验证通过：`cargo check`、`npm run build`、`npm test`。
-- 2026-04-28 22:06-22:21 输出第三期阶段性安装包：在完成 S3 Phase 13 + 14 + 15 基础能力后执行 `npm run tauri build -- --bundles nsis`，生成最新安装包 `src-tauri/target/release/bundle/nsis/RDMM_0.1.0_x64-setup.exe`（22:20）。
+- 16:50-16:59 修复 Windows 无边框窗口交互：标题栏拖拽改为显式 `startDragging()`，新增窗口四边与四角 resize 命中层并调用 `startResizeDragging()`，同时补充 capability 权限 `allow-start-dragging/allow-start-resize-dragging`，恢复窗口移动与放大缩小能力。
+- 17:24-17:26 修复标题栏双击行为：在拖拽区增加 `onDoubleClick -> toggleMaximize()`，并在 `onMouseDown` 中跳过双击场景（`event.detail > 1`），避免拖拽与双击全屏/还原冲突。
+- 19:20-19:54 启动第三期 Phase 13：完成 S3 插件连接管理闭环。后端新增 `s3_connections` 表、`db/s3_connection_repo.rs`、`plugins/s3/{mod,types,client_pool,commands}.rs`，并在 `lib.rs` 注册 `cmd_s3_list/save/delete/test/connect/disconnect`；前端新增 `s3-client` 插件（`index.tsx`、`types.ts`、`store/s3-connections.ts`、`views/S3ConnectionList.tsx`、`components/S3ConnectionForm.tsx`）并接入插件注册表。已完成验证：`cargo check`、`npm run build`、`npm test` 通过。
+- 20:20-20:37 继续第三期 Phase 14 起步：后端新增 `cmd_s3_list_buckets(conn_id)`（连接后列出 Bucket）；前端新增 `BucketList.tsx` 并在 `s3-client/index.tsx` 增加 Connections/Buckets 分段导航，连接后自动加载 Bucket 列表。验证通过：`cargo check`、`npm run build`、`npm test`。
+- 20:50-21:13 推进 Phase 14：补齐 `cmd_s3_create_bucket`、`cmd_s3_delete_bucket` 并注册到 Tauri；前端 `BucketList.tsx` 增加新建 Bucket Modal 与删除确认操作，连接后可直接完成 Bucket 列表刷新、新建、删除闭环。验证通过：`cargo check`、`npm run build`、`npm test`。
+- 21:40-22:06 推进 Phase 15 基础对象浏览：后端新增 `cmd_s3_list_objects`（prefix + delimiter + continuation token 分页），并补充 `cmd_s3_delete_object`、`cmd_s3_create_folder`；前端新增 `ObjectBrowser.tsx`，支持目录进入、前缀刷新、加载更多、文件删除、新建文件夹，形成“连接 -> Bucket -> 对象”基础闭环。验证通过：`cargo check`、`npm run build`、`npm test`。
+- 22:06-22:21 输出第三期阶段性安装包：在完成 S3 Phase 13 + 14 + 15 基础能力后执行 `npm run tauri build -- --bundles nsis`，生成最新安装包 `src-tauri/target/release/bundle/nsis/RDMM_0.1.0_x64-setup.exe`（22:20）。
+- 23:47-23:55 修复 S3 导航与分页链路：将 S3 workspace tab 提升到 Zustand（Connections/Buckets/Objects 共享），连接成功后自动跳转 Buckets、打开 Bucket 后自动跳转 Objects；Bucket 列表改为可控分页（支持翻页与每页条数切换）并在筛选变更时重置页码；打开 Bucket 时重置 prefix 并立即触发对象加载，修复 Objects 视图空白问题。验证通过：`cargo check`、`npm run build`、`npm test`。
 
-- 2026-04-28 23:47-23:55 修复 S3 导航与分页链路：将 s3 workspace tab 提升到 Zustand（connections/buckets/objects 共享），连接成功后自动跳转 Buckets、打开 Bucket 后自动跳转 Objects；Bucket 列表改为可控分页（支持翻页与每页条数切换）并在筛选变更时重置页码；打开 Bucket 时重置 prefix 并立即触发对象加载，修复 objects 视图空白问题。验证通过：cargo check、
-pm run build、
-pm test。
+### 2026-04-29
 
-- 2026-04-29 00:08-00:11 接入 macOS 自动打包 CI：新增 .github/workflows/build-macos.yml，支持 workflow_dispatch、push main、* tag 触发；在 macos-latest 上执行 
-pm ci + 
-pm run tauri build -- --bundles app,dmg，并上传 .app 与 .dmg 构建产物。
+- 00:08-00:11 接入 macOS 自动打包 CI：新增 `.github/workflows/build-macos.yml`，支持 `workflow_dispatch`、`push main`、`v*` tag 触发；在 `macos-latest` 上执行 `npm ci` + `npm run tauri build -- --bundles app,dmg`，并上传 `.app` 与 `.dmg` 构建产物。
+- 00:20-00:27 扩展 CI 为全平台打包：将 workflow 升级为 `build-desktop`，新增 Windows（NSIS `.exe`）、macOS（`.app`/`.dmg`）、Linux（`.deb`/`.AppImage`）三个并行 job，统一支持 `workflow_dispatch`、`push main`、`v*` tag 触发并上传对应 artifacts。
+- 13:08-13:13 品牌重命名：项目名由 RDMM 升级为 DevNexus（开发工具中枢）。已同步更新应用标题、Tauri productName/identifier（com.devnexus.desktop）、Rust crate 名（devnexus/devnexus_lib）、前端品牌文案、README 与跨平台 CI 产物命名。验证通过：`npm run build`、`cargo check`、`npm test`。
+- 13:20-13:31 发版流程建设：新增 `.github/workflows/release.yml`，在 `v*` tag 触发时并行构建 Windows/macOS/Linux 包并自动上传到 GitHub Release；新增发布说明 `docs/releases/v0.1.0.md`；将 `build-desktop` 标签触发调整为仅 `workflow_dispatch` + `push main`，避免与 release 工作流重复构建。
+- 16:00-16:05 Redis KeyBrowser 交互增强：实现 Key Tree 与 Key Detail 可拖拽分栏，支持中线拖动实时调整宽度，并添加最小宽度保护（左 300px / 右 420px）与分割条高亮反馈。同步新增发版文档 `docs/releases/v0.2.0.md`。
 
-- 2026-04-29 00:20-00:27 扩展 CI 为全平台打包：将 workflow 升级为 uild-desktop，新增 Windows（NSIS .exe）、macOS（.app/.dmg）、Linux（.deb/.AppImage）三个并行 job，统一支持 workflow_dispatch、push main、* tag 触发并上传对应 artifacts。
+### 2026-05-07
 
-- 2026-04-29 13:08-13:13 品牌重命名：项目名由 RDMM 升级为 DevNexus（开发工具中枢）。已同步更新应用标题、Tauri productName/identifier（com.devnexus.desktop）、Rust crate 名（devnexus/devnexus_lib）、前端品牌文案、README 与跨平台 CI 产物命名。验证通过：
-pm run build、cargo check、
-pm test。
+- Redis 遗留任务补齐：KeyTree 改为按冒号分段的层级树展示，搜索输入增加 300ms 防抖 SCAN，key 行补齐右键菜单（复制、查看详情、设置 TTL、重命名、删除）；Console 顶部补齐连接/DB 切换，并优化 Array 缩进与 Error 红色输出。
+- S3 第三期主链路补齐：扩展 S3 后端命令（Bucket region/versioning、对象版本/元数据、批量删除、复制/移动/重命名、上传/下载、预览、预签名 URL、Bucket Policy、对象标签、Bucket 统计），前端新增 ObjectList、ObjectMetaDrawer、ObjectPreview、PresignedUrlModal、BucketSettings，并将版本升至 `v0.3.0`，新增 `docs/releases/v0.3.0.md`。
+- 修复 Redis Server 页面刷新闪跳：ServerInfo 改为按 section/card 局部更新，图表实例与滚动容器保持稳定，避免轮询刷新导致整页跳动。
+- 修复 SSH 密码登录链路：密码直连 Terminal 改用原生会话通道，补齐连接测试与终端打开流程的密码认证兼容性。
 
-- 2026-04-29 13:20-13:31 发版流程建设：新增 .github/workflows/release.yml，在 * tag 触发时并行构建 Windows/macOS/Linux 包并自动上传到 GitHub Release；新增发布说明 docs/releases/v0.1.0.md；将 uild-desktop 标签触发调整为仅 workflow_dispatch + push main，避免与 release 工作流重复构建。
+### 2026-05-08
 
-- 2026-04-29 16:00-16:05 Redis KeyBrowser 交互增强：实现 Key Tree 与 Key Detail 可拖拽分栏，支持中线拖动实时调整宽度，并添加最小宽度保护（左 300px / 右 420px）与分割条高亮反馈。同步新增发版文档 docs/releases/v0.2.0.md。
+- 09:00-09:16 修复 Redis Server 页面缩放后不能滚动：Redis 工作区改为固定高度 flex，Server 页面增加独立纵向/横向滚动容器，避免窗口缩放后下方内容不可见。
+- 09:30-09:40 完成第四期 MongoDB 插件详细规划写入 `PLAN.md`，新增 Phase 20-26 任务拆分。
+- 09:40-10:05 完成 MongoDB 后端基础：新增 `mongodb_connections`/`mongodb_query_history` 表、连接配置加密 repo、MongoDB client pool、Tauri commands，并通过 `cargo check` 验证。
+- 10:05-10:35 完成 MongoDB 前端主链路初版：新增 `mongodb-client` 插件、连接表单、连接列表、数据库/集合浏览、文档 CRUD、查询/聚合、索引、导入导出和 Server 状态页面。
+- 10:35-10:56 完成第四期发布配套与验证：版本升至 `0.4.0`，新增 `docs/releases/v0.4.0.md`，README 增加 MongoDB 插件说明；`cargo check`、`npm test`、`npm run build`、`npm run tauri build -- --bundles nsis` 均通过，生成 `DevNexus_0.4.0_x64-setup.exe`。
+- 11:00-11:05 优化 MongoDB Connections 标签尺寸：状态、默认数据库、TLS、SRV 标签改为小号样式，仅作用于 MongoDB 连接卡片；`npm run build` 验证通过。
+- 11:49-11:56 执行 v0.4.0 发布前验证与打包：`npm test`、`cargo check`、`npm run build`、`npm run tauri build -- --bundles nsis` 通过，重新生成 `DevNexus_0.4.0_x64-setup.exe`，准备提交并推送 `v0.4.0` tag 触发 GitHub Release。
 
-- 2026-05-07 Redis 遗留任务补齐：KeyTree 改为按冒号分段的层级树展示，搜索输入增加 300ms 防抖 SCAN，key 行补齐右键菜单（复制、查看详情、设置 TTL、重命名、删除）；Console 顶部补齐连接/DB 切换，并优化 Array 缩进与 Error 红色输出。
 
-- 2026-05-07 S3 第三期主链路补齐：扩展 S3 后端命令（Bucket region/versioning、对象版本/元数据、批量删除、复制/移动/重命名、上传/下载、预览、预签名 URL、Bucket Policy、对象标签、Bucket 统计），前端新增 ObjectList、ObjectMetaDrawer、ObjectPreview、PresignedUrlModal、BucketSettings，并将版本升至 v0.3.0，新增 docs/releases/v0.3.0.md。

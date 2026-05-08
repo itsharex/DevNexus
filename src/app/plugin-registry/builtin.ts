@@ -1,5 +1,6 @@
 import { register } from "@/app/plugin-registry/registry";
 import { redisManagerPlugin } from "@/plugins/redis-manager";
+import { mongodbClientPlugin } from "@/plugins/mongodb-client";
 import { s3ClientPlugin } from "@/plugins/s3-client";
 import { sshClientPlugin } from "@/plugins/ssh-client";
 
@@ -13,5 +14,6 @@ export function registerBuiltinPlugins(): void {
   register(redisManagerPlugin);
   register(sshClientPlugin);
   register(s3ClientPlugin);
+  register(mongodbClientPlugin);
   initialized = true;
 }

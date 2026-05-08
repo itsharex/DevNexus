@@ -1,4 +1,4 @@
-import { Col, Row, Segmented, Space } from "antd";
+import { Col, Row, Segmented } from "antd";
 import { useEffect, useMemo } from "react";
 import { DatabaseOutlined } from "@ant-design/icons";
 
@@ -36,8 +36,8 @@ function RedisManagerRoot() {
   }, [tab]);
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Row justify="start" align="middle">
+    <div className="rdmm-redis-workspace">
+      <Row justify="start" align="middle" className="rdmm-redis-workspace__tabs">
         <Col>
           <Segmented<RedisWorkspaceTab>
             value={tab}
@@ -51,8 +51,8 @@ function RedisManagerRoot() {
           />
         </Col>
       </Row>
-      {content}
-    </Space>
+      <div className="rdmm-redis-workspace__content">{content}</div>
+    </div>
   );
 }
 

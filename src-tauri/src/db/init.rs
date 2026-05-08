@@ -107,6 +107,34 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
           default_bucket TEXT,
           created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS mongodb_connections (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          group_name TEXT,
+          mode TEXT NOT NULL DEFAULT 'uri',
+          uri_encrypted TEXT,
+          host TEXT,
+          port INTEGER NOT NULL DEFAULT 27017,
+          username TEXT,
+          password_encrypted TEXT,
+          auth_database TEXT,
+          default_database TEXT,
+          replica_set TEXT,
+          tls INTEGER NOT NULL DEFAULT 0,
+          srv INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS mongodb_query_history (
+          id TEXT PRIMARY KEY NOT NULL,
+          connection_id TEXT NOT NULL,
+          database_name TEXT,
+          collection_name TEXT,
+          query_type TEXT NOT NULL,
+          content TEXT NOT NULL,
+          executed_at TEXT NOT NULL
+        );
         "#,
     )
     .map_err(|err| format!("failed to initialize schema: {err}"))?;
