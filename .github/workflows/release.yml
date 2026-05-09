@@ -116,14 +116,19 @@ jobs:
         with:
           path: dist-release  # 自动把所有 artifact 下载到这里
 
+      - name: List downloaded release files
+        run: find dist-release -maxdepth 5 -type f -print
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: DevNexus ${{ github.ref_name }}
           body_path: docs/releases/${{ github.ref_name }}.md  # 先注释掉，避免找不到文件
           files: |
-            dist-release/release-windows/*.exe
-            dist-release/release-macos/*.dmg
-            dist-release/release-linux/*.deb
-            dist-release/release-linux/*.AppImage
-          fail_on_unmatched_files: false  # 避免因路径问题直接失败
+            dist-release/release-windows/**/*.exe
+            dist-release/release-macos/**/*.dmg
+            dist-release/release-linux/**/*.deb
+            dist-release/release-linux/**/*.AppImage
+          fail_on_unmatched_files: true
+
+
