@@ -20,7 +20,7 @@ export const useThemeStore = create<ThemeState>()(
         }),
     }),
     {
-      name: "rdmm-theme",
+      name: "devnexus-theme",
     },
   ),
 );

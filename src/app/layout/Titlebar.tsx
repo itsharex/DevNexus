@@ -12,9 +12,9 @@ export function Titlebar() {
   const appWindow = canControlWindow ? getCurrentWindow() : null;
 
   return (
-    <header className="rdmm-titlebar">
+    <header className="devnexus-titlebar">
       <div
-        className="rdmm-titlebar__drag"
+        className="devnexus-titlebar__drag"
         onMouseDown={(event) => {
           if (!appWindow || event.button !== 0) {
             return;
@@ -37,7 +37,7 @@ export function Titlebar() {
           void appWindow.toggleMaximize();
         }}
       >
-        <Typography.Text className="rdmm-titlebar__title">DevNexus</Typography.Text>
+        <Typography.Text className="devnexus-titlebar__title">DevNexus</Typography.Text>
       </div>
       <Space size={4}>
         <Button

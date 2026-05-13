@@ -260,8 +260,8 @@ export function KeyBrowser() {
           </Typography.Text>
         </Col>
       </Row>
-      <div className="rdmm-key-browser-split" ref={splitContainerRef}>
-        <div className="rdmm-key-browser-pane" style={{ width: leftPaneWidth }}>
+      <div className="devnexus-key-browser-split" ref={splitContainerRef}>
+        <div className="devnexus-key-browser-pane" style={{ width: leftPaneWidth }}>
           <Card title={`Key Tree (DB ${activeDbIndex})`} style={{ height: "100%" }}>
           <KeyTree
             keys={keys}
@@ -329,7 +329,7 @@ export function KeyBrowser() {
         </Card>
         </div>
         <div
-          className={`rdmm-key-browser-divider${isResizing ? " is-resizing" : ""}`}
+          className={`devnexus-key-browser-divider${isResizing ? " is-resizing" : ""}`}
           role="separator"
           aria-orientation="vertical"
           onMouseDown={(event) => {
@@ -357,7 +357,7 @@ export function KeyBrowser() {
             document.addEventListener("mouseup", onMouseUp);
           }}
         />
-        <div className="rdmm-key-browser-pane rdmm-key-browser-pane--right">
+        <div className="devnexus-key-browser-pane devnexus-key-browser-pane--right">
           <Card title="Key Detail" style={{ height: "100%" }}>
             <Space direction="vertical" style={{ width: "100%" }}>
               <Space>

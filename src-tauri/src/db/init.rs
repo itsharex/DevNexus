@@ -16,7 +16,13 @@ fn ensure_directory(path: &Path) -> Result<(), String> {
 
 pub fn db_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let data_dir = data_dir(app_handle)?;
-    Ok(data_dir.join("rdmm.db"))
+    let current = data_dir.join("devnexus.db");
+    let legacy = data_dir.join("rdmm.db");
+    if !current.exists() && legacy.exists() {
+        fs::rename(&legacy, &current)
+            .map_err(|err| format!("failed to migrate legacy db path: {err}"))?;
+    }
+    Ok(current)
 }
 
 pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -157,10 +163,80 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
           sql_text TEXT NOT NULL,
           executed_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS network_diagnostic_history (
+          id TEXT PRIMARY KEY NOT NULL,
+          tool_type TEXT NOT NULL,
+          target TEXT NOT NULL,
+          params_json TEXT NOT NULL,
+          status TEXT NOT NULL,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          summary TEXT NOT NULL,
+          result_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS api_collections (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS api_folders (
+          id TEXT PRIMARY KEY NOT NULL,
+          collection_id TEXT NOT NULL,
+          parent_id TEXT,
+          name TEXT NOT NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS api_requests (
+          id TEXT PRIMARY KEY NOT NULL,
+          collection_id TEXT,
+          folder_id TEXT,
+          name TEXT NOT NULL,
+          method TEXT NOT NULL,
+          url TEXT NOT NULL,
+          params_json TEXT NOT NULL DEFAULT '[]',
+          headers_json TEXT NOT NULL DEFAULT '[]',
+          cookies_json TEXT NOT NULL DEFAULT '[]',
+          auth_json TEXT NOT NULL DEFAULT 'null',
+          body_json TEXT NOT NULL DEFAULT 'null',
+          pre_request TEXT,
+          timeout_ms INTEGER NOT NULL DEFAULT 30000,
+          follow_redirects INTEGER NOT NULL DEFAULT 1,
+          validate_ssl INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS api_environments (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          variables_json TEXT NOT NULL DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS api_request_history (
+          id TEXT PRIMARY KEY NOT NULL,
+          method TEXT NOT NULL,
+          url TEXT NOT NULL,
+          host TEXT,
+          status TEXT NOT NULL,
+          status_code INTEGER,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          request_json TEXT NOT NULL,
+          response_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
         "#,
     )
     .map_err(|err| format!("failed to initialize schema: {err}"))?;
 
     Ok(db_path)
 }
-

@@ -105,7 +105,7 @@ export function MongoConnectionList() {
                       <Space direction="vertical" size={4}>
                         <Space>
                           <Typography.Text strong>{conn.name}</Typography.Text>
-                          <Tag className="rdmm-mongo-connection-tag" color={connected ? "green" : "default"}>
+                          <Tag className="devnexus-mongo-connection-tag" color={connected ? "green" : "default"}>
                             {connected ? "Connected" : "Disconnected"}
                           </Tag>
                         </Space>
@@ -114,15 +114,15 @@ export function MongoConnectionList() {
                         </Typography.Text>
                         <Space wrap>
                           {conn.defaultDatabase ? (
-                            <Tag className="rdmm-mongo-connection-tag">{conn.defaultDatabase}</Tag>
+                            <Tag className="devnexus-mongo-connection-tag">{conn.defaultDatabase}</Tag>
                           ) : null}
                           {conn.tls ? (
-                            <Tag className="rdmm-mongo-connection-tag" color="blue">
+                            <Tag className="devnexus-mongo-connection-tag" color="blue">
                               TLS
                             </Tag>
                           ) : null}
                           {conn.srv ? (
-                            <Tag className="rdmm-mongo-connection-tag" color="purple">
+                            <Tag className="devnexus-mongo-connection-tag" color="purple">
                               SRV
                             </Tag>
                           ) : null}

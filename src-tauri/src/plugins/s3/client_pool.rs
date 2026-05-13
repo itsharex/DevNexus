@@ -40,7 +40,7 @@ pub async fn build_client(
         secret_access_key.to_string(),
         None,
         None,
-        "rdmm-s3",
+        "devnexus-s3",
     );
     let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .region(aws_config::Region::new(config.region.clone()))
