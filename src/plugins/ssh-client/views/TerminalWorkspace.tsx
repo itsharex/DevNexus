@@ -10,6 +10,7 @@ export function TerminalWorkspace() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
+  const [fullscreenSessionId, setFullscreenSessionId] = useState<string | null>(null);
 
   const sessions = useSshSessionsStore((state) => state.sessions);
   const activeSessionId = useSshSessionsStore((state) => state.activeSessionId);
@@ -29,6 +30,10 @@ export function TerminalWorkspace() {
     await openSession(connId, label);
     setPickerOpen(false);
   };
+
+  const fullscreenSession = sessions.find(
+    (session) => session.sessionId === fullscreenSessionId,
+  );
 
   if (sessions.length === 0) {
     return (
@@ -62,6 +67,20 @@ export function TerminalWorkspace() {
           </Space>
         </Modal>
       </Card>
+    );
+  }
+
+  if (fullscreenSession) {
+    return (
+      <div className="devnexus-terminal-workspace devnexus-terminal-workspace--fullscreen">
+        <TerminalTab
+          sessionId={fullscreenSession.sessionId}
+          connId={fullscreenSession.connId}
+          status={fullscreenSession.status}
+          fullscreen
+          onToggleFullscreen={() => setFullscreenSessionId(null)}
+        />
+      </div>
     );
   }
 
@@ -116,6 +135,12 @@ export function TerminalWorkspace() {
                 sessionId={session.sessionId}
                 connId={session.connId}
                 status={session.status}
+                fullscreen={fullscreenSessionId === session.sessionId}
+                onToggleFullscreen={() =>
+                  setFullscreenSessionId((current) =>
+                    current === session.sessionId ? null : session.sessionId,
+                  )
+                }
               />
             </div>
           ),

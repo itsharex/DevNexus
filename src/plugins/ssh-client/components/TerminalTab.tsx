@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Card, Space, Tag, Typography } from "antd";
+import { FullscreenExitOutlined, FullscreenOutlined } from "@ant-design/icons";
 import { Terminal } from "xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -7,15 +8,29 @@ import "xterm/css/xterm.css";
 
 import { useSshSessionsStore } from "@/plugins/ssh-client/store/sessions";
 import { QuickCommandPanel } from "@/plugins/ssh-client/components/QuickCommandPanel";
+import {
+  getCommandSuggestions,
+  updateCommandDraft,
+} from "@/plugins/ssh-client/utils/command-suggestions";
 
 interface TerminalTabProps {
   sessionId: string;
   connId: string;
   status: "connecting" | "active" | "closed";
+  fullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
-export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
+export function TerminalTab({
+  sessionId,
+  connId,
+  status,
+  fullscreen = false,
+  onToggleFullscreen,
+}: TerminalTabProps) {
   const output = useSshSessionsStore((state) => state.outputBySession[sessionId] ?? []);
+  const quickCommands = useSshSessionsStore((state) => state.quickCommands);
+  const loadQuickCommands = useSshSessionsStore((state) => state.loadQuickCommands);
   const sendInput = useSshSessionsStore((state) => state.sendInput);
   const resizeSession = useSshSessionsStore((state) => state.resizeSession);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -23,6 +38,8 @@ export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
   const fitRef = useRef<FitAddon | null>(null);
   const renderedChunksRef = useRef(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [commandDraft, setCommandDraft] = useState("");
+  const suggestions = getCommandSuggestions(commandDraft, quickCommands, 5);
 
   useEffect(() => {
     if (!containerRef.current || terminalRef.current) {
@@ -49,6 +66,7 @@ export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
     void resizeSession(sessionId, terminal.cols, terminal.rows);
 
     const disposeData = terminal.onData((chunk) => {
+      setCommandDraft((current) => updateCommandDraft(current, chunk));
       void sendInput(sessionId, chunk);
     });
     const resizeObserver = new ResizeObserver(() => {
@@ -67,6 +85,19 @@ export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
   }, [sessionId, sendInput, resizeSession]);
 
   useEffect(() => {
+    void loadQuickCommands(connId);
+  }, [connId, loadQuickCommands]);
+
+  useEffect(() => {
+    window.setTimeout(() => {
+      fitRef.current?.fit();
+      if (terminalRef.current) {
+        void resizeSession(sessionId, terminalRef.current.cols, terminalRef.current.rows);
+      }
+    }, 0);
+  }, [fullscreen, sessionId, resizeSession]);
+
+  useEffect(() => {
     if (!terminalRef.current) {
       return;
     }
@@ -80,13 +111,21 @@ export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
     renderedChunksRef.current = output.length;
   }, [output]);
 
+  const applySuggestion = async (command: string) => {
+    const prefix = commandDraft.trimStart();
+    const nextInput = command.startsWith(prefix) ? command.slice(prefix.length) : command;
+    await sendInput(sessionId, nextInput);
+    setCommandDraft(command);
+  };
+
   return (
     <Card
       size="small"
+      className={fullscreen ? "devnexus-terminal-card devnexus-terminal-card--fullscreen" : "devnexus-terminal-card"}
       style={{ height: "100%" }}
       styles={{
         body: {
-          padding: 10,
+          padding: fullscreen ? 12 : 10,
           height: "100%",
           display: "flex",
           flexDirection: "column",
@@ -96,6 +135,12 @@ export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
       extra={
         <Space>
           <Tag color={status === "active" ? "green" : "default"}>{status}</Tag>
+          <Button
+            size="small"
+            icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            onClick={onToggleFullscreen}
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+          />
           <Button size="small" onClick={() => setDrawerOpen(true)}>
             Quick Commands
           </Button>
@@ -117,6 +162,21 @@ export function TerminalTab({ sessionId, connId, status }: TerminalTabProps) {
           background: "#0b1220",
         }}
       />
+      <div className="devnexus-terminal-suggestions">
+        {suggestions.map((item) => (
+          <button
+            key={`${item.source}-${item.command}`}
+            className="devnexus-terminal-suggestion"
+            type="button"
+            title={item.command}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => void applySuggestion(item.command)}
+          >
+            <span>{item.label}</span>
+            {item.source === "quick" ? <em>quick</em> : null}
+          </button>
+        ))}
+      </div>
       <QuickCommandPanel
         open={drawerOpen}
         activeConnectionId={connId}
