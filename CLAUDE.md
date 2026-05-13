@@ -52,7 +52,7 @@ Frontend calls use `invoke()` from `@tauri-apps/api/core`. Rust structs use `#[s
 ```
 src-tauri/src/
 ├── lib.rs                    # Tauri builder + all command registrations
-├── crypto/mod.rs             # AES-256-GCM encrypt/decrypt (key at rdmm.key)
+├── crypto/mod.rs             # AES-256-GCM encrypt/decrypt (DevNexus key file with legacy migration)
 ├── db/
 │   ├── init.rs               # SQLite schema (7 tables, run on startup)
 │   ├── connection_repo.rs    # Redis connection CRUD
@@ -79,7 +79,7 @@ Redis plugin stores: `useConnectionsStore`, `useWorkspaceStore` (active view + c
 
 ### Database
 
-SQLite is initialized on startup from `db/init.rs`. Tables: `connections`, `query_history`, `ssh_connections`, `ssh_keys`, `ssh_quick_commands`, `port_forward_rules`. Connection passwords are encrypted with AES-256-GCM before storage using the app-wide key in `rdmm.key`.
+SQLite is initialized on startup from `db/init.rs`. Tables include Redis, SSH, S3, MongoDB, MySQL, and Network diagnostic storage. Connection passwords are encrypted with AES-256-GCM before storage using the app-wide DevNexus key file. Startup migrates legacy local database/key filenames to the DevNexus names when needed.
 
 ### Testing
 

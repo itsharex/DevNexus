@@ -36,8 +36,8 @@ function RedisManagerRoot() {
   }, [tab]);
 
   return (
-    <div className="rdmm-redis-workspace">
-      <Row justify="start" align="middle" className="rdmm-redis-workspace__tabs">
+    <div className="devnexus-redis-workspace">
+      <Row justify="start" align="middle" className="devnexus-redis-workspace__tabs">
         <Col>
           <Segmented<RedisWorkspaceTab>
             value={tab}
@@ -51,7 +51,7 @@ function RedisManagerRoot() {
           />
         </Col>
       </Row>
-      <div className="rdmm-redis-workspace__content">{content}</div>
+      <div className="devnexus-redis-workspace__content">{content}</div>
     </div>
   );
 }

@@ -6,9 +6,9 @@
 
 ## 中文
 
-DevNexus 是一个基于 **Tauri 2 + React 19 + TypeScript + Rust** 的插件化桌面工具箱，面向开发、运维和日常数据管理场景。它把常用的连接类工具放进同一个轻量桌面应用里，当前重点覆盖 Redis、SSH、S3、MongoDB 和 MySQL。
+DevNexus 是一个基于 **Tauri 2 + React 19 + TypeScript + Rust** 的插件化桌面工具箱，面向开发、运维和日常数据管理场景。它把常用的连接类工具放进同一个轻量桌面应用里，当前重点覆盖 Redis、SSH、S3、MongoDB、MySQL、Network 诊断和 API 调试。
 
-当前版本：`0.5.0`
+当前版本：`0.7.0`
 
 ### 核心能力
 
@@ -19,6 +19,8 @@ DevNexus 是一个基于 **Tauri 2 + React 19 + TypeScript + Rust** 的插件化
 | S3 Browser | 已实现 | S3 连接管理、Bucket 浏览、Object 浏览、上传下载、预览、预签名 URL、Bucket 设置 |
 | MongoDB Client | 已实现 | 连接管理、数据库/集合浏览、文档 CRUD、查询/聚合、索引、导入导出、Server 状态 |
 | MySQL Client | 已实现 | 连接管理、库表浏览、表数据 CRUD、SQL 查询、索引、导入导出、Server 状态 |
+| Network Tools | 已实现 | Ping、TCP 端口检测、DNS 解析、Traceroute、诊断历史与复跑 |
+| API Debugger | 已实现 | HTTP 请求构建与发送、集合/环境变量、响应查看、历史复跑、cURL 导入、脱敏导出 |
 
 ### 产品特点
 
@@ -45,6 +47,7 @@ DevNexus 是一个基于 **Tauri 2 + React 19 + TypeScript + Rust** 的插件化
 | S3 | AWS Rust SDK |
 | MongoDB | official `mongodb` Rust driver |
 | MySQL | `mysql_async` |
+| HTTP/API | eqwest |
 
 ### 项目结构
 
@@ -57,6 +60,8 @@ src/
     s3-client/
     mongodb-client/
     mysql-client/
+    network-tools/
+    api-debugger/
   styles/                      全局样式
 
 src-tauri/
@@ -68,6 +73,8 @@ src-tauri/
       s3/
       mongodb/
       mysql/
+      network/
+      api_debugger/
     crypto/                    本地敏感字段加解密
   icons/                       应用图标资源
   tauri.conf.json              Tauri 应用配置
@@ -139,7 +146,7 @@ npm run tauri build -- --bundles deb,appimage
 Windows 产物示例：
 
 ```text
-src-tauri/target/release/bundle/nsis/DevNexus_0.5.0_x64-setup.exe
+src-tauri/target/release/bundle/nsis/DevNexus_0.7.0_x64-setup.exe
 ```
 
 ### 发布流程
@@ -167,26 +174,27 @@ git push origin vX.Y.Z
 
 - 不要提交真实连接密码、密钥、Token、对象存储凭据或本地数据库文件。
 - 不要提交 `node_modules/`、`dist/`、`src-tauri/target/` 或打包生成的安装包。
-- Redis、SSH、S3、MongoDB、MySQL 的连接数据都应视为敏感数据。
+- Redis、SSH、S3、MongoDB、MySQL 的连接数据，以及 API Debugger 的环境变量、Token、Cookie、Authorization header 都应视为敏感数据。
 - 截图、测试夹具和 issue 描述中应隐藏主机地址、用户名、密钥路径和访问凭据。
 
 ### 当前限制
 
 - Redis Sentinel/Cluster、S3 生命周期编辑、应用内自动更新等能力仍按 `PLAN.md` 继续迭代。
 - MySQL 当前优先覆盖 MySQL 5.7/8.0 常用管理能力；MariaDB 基础协议兼容时可尝试使用，但不是当前验收重点。
+- Network 工具首版只做单次诊断与历史复跑，不做批量端口扫描或持续监控。API Debugger 首版支持 HTTP 调试、集合、环境、历史、cURL 导入和脱敏导出，暂不承诺完整 Postman Collection/脚本生态兼容。
 - 大表、大桶、大集合场景应优先使用分页、前缀过滤或查询条件，避免一次性加载过多数据。
 
 ### 路线图
 
-后续路线以 `PLAN.md` 为准。当前已完成 Redis、SSH、S3、MongoDB、MySQL 五条主线，后续将继续补齐导入导出细节、更新检测、更多数据库能力和体验优化。
+后续路线以 `PLAN.md` 为准。当前已完成 Redis、SSH、S3、MongoDB、MySQL、Network、API Debugger 七条主线，后续将继续补齐导入导出细节、更新检测、更多数据库能力和体验优化。
 
 ---
 
 ## English
 
-DevNexus is a plugin-based desktop toolbox built with **Tauri 2 + React 19 + TypeScript + Rust**. It is designed for everyday development, operations, and data-management workflows, bringing common connection-oriented tools into one lightweight desktop application.
+DevNexus is a plugin-based desktop toolbox built with **Tauri 2 + React 19 + TypeScript + Rust**. It is designed for everyday development, operations, and data-management workflows, bringing common connection-oriented and diagnostic tools into one lightweight desktop application.
 
-Current version: `0.5.0`
+Current version: `0.7.0`
 
 ### Features
 
@@ -197,6 +205,8 @@ Current version: `0.5.0`
 | S3 Browser | Implemented | S3 profiles, bucket browsing, object browsing, upload/download, preview, presigned URLs, bucket settings |
 | MongoDB Client | Implemented | Profiles, database/collection browsing, document CRUD, find/aggregate/command workspace, indexes, import/export, server status |
 | MySQL Client | Implemented | Profiles, database/table browsing, table-data CRUD, SQL workspace, indexes, import/export, server status |
+| Network Tools | Implemented | Ping, TCP port checks, DNS lookup, Traceroute, diagnostic history and rerun |
+| API Debugger | Implemented | HTTP request builder/sender, collections/environments, response inspection, history rerun, cURL import, redacted export |
 
 ### Highlights
 
@@ -223,6 +233,7 @@ Current version: `0.5.0`
 | S3 | AWS Rust SDK |
 | MongoDB | official `mongodb` Rust driver |
 | MySQL | `mysql_async` |
+| HTTP/API | eqwest |
 
 ### Repository Layout
 
@@ -316,7 +327,7 @@ npm run tauri build -- --bundles deb,appimage
 Windows artifact example:
 
 ```text
-src-tauri/target/release/bundle/nsis/DevNexus_0.5.0_x64-setup.exe
+src-tauri/target/release/bundle/nsis/DevNexus_0.7.0_x64-setup.exe
 ```
 
 ### Release Process
@@ -344,15 +355,16 @@ git push origin vX.Y.Z
 
 - Do not commit real passwords, SSH keys, tokens, object-storage credentials, or local database files.
 - Do not commit `node_modules/`, `dist/`, `src-tauri/target/`, or generated installers.
-- Treat Redis, SSH, S3, MongoDB, and MySQL connection profiles as sensitive data.
+- Treat Redis, SSH, S3, MongoDB, and MySQL connection profiles, plus API Debugger environment variables, tokens, cookies, and Authorization headers, as sensitive data.
 - Redact hostnames, usernames, key paths, and credentials in screenshots, fixtures, and issues.
 
 ### Known Limits
 
 - Redis Sentinel/Cluster, S3 lifecycle editing, and in-app auto-update are still roadmap items tracked in `PLAN.md`.
 - MySQL currently targets common MySQL 5.7/8.0 workflows. MariaDB may work when protocol-compatible, but it is not the primary validation target.
+- Network Tools currently support one-shot diagnostics and history reruns, not bulk port scanning or continuous monitoring. API Debugger supports HTTP debugging, collections, environments, history, cURL import, and redacted export, but does not yet promise full Postman Collection or script ecosystem compatibility.
 - Large tables, buckets, or collections should be browsed with pagination, prefixes, or query filters rather than loading everything at once.
 
 ### Roadmap
 
-The canonical roadmap is `PLAN.md`. Redis, SSH, S3, MongoDB, and MySQL main tracks are implemented; future iterations will continue improving import/export, update checks, database depth, and user experience.
+The canonical roadmap is `PLAN.md`. Redis, SSH, S3, MongoDB, MySQL, Network, and API Debugger main tracks are implemented; future iterations will continue improving import/export, update checks, database depth, diagnostics, and user experience.

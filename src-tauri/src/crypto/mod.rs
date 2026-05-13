@@ -3,12 +3,19 @@ use aes_gcm::{Aes256Gcm, Key, Nonce};
 use std::fs;
 use std::path::PathBuf;
 
-const KEY_FILE_NAME: &str = "rdmm.key";
+const KEY_FILE_NAME: &str = "devnexus.key";
+const LEGACY_KEY_FILE_NAME: &str = "rdmm.key";
 const NONCE_BYTES: [u8; 12] = [0; 12];
 
 fn key_file_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dir = crate::db::init::data_dir(app_handle)?;
-    Ok(dir.join(KEY_FILE_NAME))
+    let current = dir.join(KEY_FILE_NAME);
+    let legacy = dir.join(LEGACY_KEY_FILE_NAME);
+    if !current.exists() && legacy.exists() {
+        fs::rename(&legacy, &current)
+            .map_err(|err| format!("failed to migrate legacy key path: {err}"))?;
+    }
+    Ok(current)
 }
 
 fn load_or_create_key(app_handle: &tauri::AppHandle) -> Result<Vec<u8>, String> {

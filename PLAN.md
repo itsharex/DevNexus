@@ -1,6 +1,6 @@
-# RDMM - Windows 常用工具包开发计划
+# DevNexus - 常用工具包开发计划
 
-> rdmm = Redis & Dev Manager  
+> DevNexus = Developer Nexus
 > 定位：插件化 Windows 桌面工具箱，第一期实现 Redis 管理工具
 
 ---
@@ -52,7 +52,7 @@
 ## 目录结构
 
 ```
-rdmm/
+DevNexus/
 ├── src/
 │   ├── main.tsx                    # 应用入口
 │   ├── app/
@@ -145,7 +145,7 @@ rdmm/
 - [x] 标题栏/侧边栏适配暗色模式 CSS 变量
 
 ### 0.6 SQLite 初始化
-- [x] Rust `db/init.rs`：应用启动时在数据目录创建 `rdmm.db`
+- [x] Rust `db/init.rs`：应用启动时在数据目录创建本地 SQLite 数据库（`devnexus.db`，启动时自动迁移旧文件名）
 - [x] 建表 `connections`（id, name, group_name, host, port, password_encrypted, db_index, connection_type, created_at）
 - [x] 建表 `query_history`（id, connection_id, command, executed_at）
 - [x] Tauri 启动钩子中调用 `db::init::run()`
@@ -1185,6 +1185,151 @@ src-tauri/src/plugins/s3/
 - [x] 新增 `docs/releases/v0.5.0.md`
 - [x] 运行 `npm test`、`cargo check`、`npm run build`、`npm run tauri build -- --bundles nsis`
 
+---
+
+# 第六期：端口/网络诊断工具插件
+
+> 目标：新增 `network-tools` 插件，提供 Ping、TCP 端口检测、DNS 解析、Traceroute 与诊断历史能力，帮助快速排查连接、端口和域名解析问题。HTTP/API 调试后续作为独立 Postman 类工具迭代。
+
+---
+
+## 第六期技术选型增量
+
+| 新增项 | 方案 | 说明 |
+|--------|------|------|
+| TCP 检测 | `tokio::net::TcpStream` | 原生 async 连接检测，支持超时控制，不依赖系统命令 |
+| Ping / Traceroute | 系统命令封装 | Windows 使用 `ping` / `tracert`，macOS/Linux 使用 `ping` / `traceroute`，避免 ICMP 权限问题 |
+| DNS 解析 | Rust 标准解析优先 | 首版覆盖 A/AAAA；如需 MX/TXT/CNAME 再引入专用 resolver |
+| 历史记录 | SQLite + JSON 结果 | 保存工具类型、目标、参数、状态、耗时、摘要和完整结果，支持复跑 |
+
+---
+
+## Phase 34：Network 插件脚手架与历史存储
+
+- [x] 新增 `network-tools` 前端插件入口、类型定义、Zustand store 与基础视图结构。
+- [x] 插件页面分为 `Diagnostics` 与 `History` 两个 Tab。
+- [x] 新增 Rust 后端模块 `src-tauri/src/plugins/network/{mod,types,commands}.rs`。
+- [x] 在 `plugins/mod.rs` 与 `lib.rs` 注册 Network 模块和 Tauri commands。
+- [x] 在 `db/init.rs` 新增 `network_diagnostic_history` 表。
+- [x] 历史表字段包含：id、tool_type、target、params_json、status、duration_ms、summary、result_json、created_at。
+
+## Phase 35：核心诊断命令
+
+- [x] 实现 `cmd_network_tcp_check(host, port, timeout_ms)`：返回 connected、duration_ms、remote_addr、error。
+- [x] 实现 `cmd_network_ping(target, count, timeout_ms)`：返回 transmitted、received、loss_percent、avg_ms、raw_output。
+- [x] 实现 `cmd_network_dns_lookup(host, record_type, timeout_ms)`：首版支持 A/AAAA 解析，返回 addresses、duration_ms。
+- [x] 实现 `cmd_network_traceroute(target, max_hops, timeout_ms)`：返回 hop 列表、duration_ms、raw_output。
+- [x] 每次诊断完成后写入 `network_diagnostic_history`，失败结果也保留，便于复盘。
+
+## Phase 36：诊断 UI 与历史复跑
+
+- [x] `Diagnostics` 页面顶部提供工具类型选择：Ping、TCP、DNS、Traceroute。
+- [x] 根据工具类型动态展示表单字段，并提供合理默认值：count=4、timeout=5000ms、max_hops=30。
+- [x] 统一结果面板展示成功/失败状态、耗时、关键指标卡片与原始输出折叠区。
+- [x] TCP 表单支持 host + port 输入；首版不做批量端口扫描和持续监控。
+- [x] `History` 页面支持列表、详情、复制目标、一键复跑、删除单条、清空全部。
+- [x] 错误展示覆盖非法目标、超时、DNS 解析失败、命令不可用、网络不可达等场景。
+
+## Phase 37：文档、验证与发布准备
+
+- [x] 版本升至 `0.6.0`，同步更新 `package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json`。
+- [x] 新增 `docs/releases/v0.6.0.md`，记录 Network 插件能力、限制与验证结果。
+- [x] README 增加 Network 端口/网络诊断工具说明。
+- [x] 运行 `npm test`，确保插件注册与既有测试通过。
+- [x] 运行 `npm run build`，确保前端类型检查与构建通过。
+- [x] 运行 `cd src-tauri && cargo check`，确保 Rust 后端编译通过。
+- [x] 运行 `npm run tauri build -- --bundles nsis`，生成 Windows 安装包。
+
+---
+
+# 第七期：API 调试工具插件
+
+> 目标：新增 `api-debugger` 插件，提供类似 Postman 的 HTTP/API 调试能力，覆盖请求构建、发送、响应查看、集合管理、环境变量、历史复跑和基础导入导出。
+
+---
+
+## 第七期技术选型增量
+
+| 新增项 | 方案 | 说明 |
+|--------|------|------|
+| HTTP 客户端 | `reqwest` | Rust 后端统一发送请求，支持超时、重定向、Headers、Body 与响应元数据 |
+| 请求存储 | SQLite + JSON 字段 | 保存集合、请求、环境变量、历史记录，复杂参数使用 JSON 存储 |
+| 敏感字段处理 | AES-GCM + 脱敏展示 | 环境 secret、Auth Token 等敏感字段加密存储；历史记录默认脱敏 |
+| 变量与模板 | 本地解析器 | 支持 `{{baseUrl}}`、`{{token}}` 等变量替换，发送前提供解析预览与缺失变量提示 |
+| 请求体构建 | 前端编辑 + 后端归一化 | 前端负责表单化编辑，后端统一转换为 `reqwest` 请求，避免 UI 与协议细节耦合 |
+| 响应展示 | 前端格式化 | JSON 自动 Pretty，其他内容提供 Raw/Preview 基础查看 |
+
+---
+
+## Phase 38：API Debugger 插件脚手架与数据模型
+
+- [x] 新增 `api-debugger` 前端插件入口、类型定义、Zustand store 与基础视图。
+- [x] 新增 Rust 后端模块 `src-tauri/src/plugins/api_debugger/{mod,types,commands}.rs`。
+- [x] 在 `plugins/mod.rs` 与 `lib.rs` 注册 API Debugger 模块和 Tauri commands。
+- [x] 新增 SQLite 表：`api_collections`、`api_folders`、`api_requests`、`api_environments`、`api_request_history`。
+- [x] `api_requests` 保存 collection/folder 归属、method、url、params、headers、auth、body、pre_request、timeout、redirect、created_at、updated_at。
+- [x] `api_environments` 保存变量 JSON，并区分普通变量与 secret 变量；secret value 使用 AES-GCM 加密。
+- [x] `api_request_history` 保存请求快照、响应摘要、脱敏后的 headers/body 摘要、duration、created_at，并预留 history 保留数量上限。
+- [x] 定义请求模型：method、url、params、headers、cookies、auth、body、timeout、redirect、environment_id。
+- [x] 定义响应模型：status、status_text、duration_ms、size_bytes、headers、cookies、body、content_type、redirect_chain、error。
+- [ ] 增加模型单元测试：变量替换、secret 脱敏、请求快照序列化兼容。
+
+## Phase 39：HTTP 请求执行核心
+
+- [x] 引入 `reqwest`，实现 `cmd_api_send_request(request)`。
+- [x] 支持 GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS。
+- [x] 支持 Query Params、Headers、Cookies、Basic/Bearer/API Key Auth。
+- [x] 支持 Body：none、raw JSON/text/XML、binary file、form-urlencoded、multipart form-data。
+- [x] 支持 timeout、redirect 开关、SSL 校验开关、User-Agent 默认值和基础 TLS 错误提示。
+- [x] 实现 `{{variable}}` 环境变量替换，发送前返回解析后的 URL/headers/body 预览；缺失变量阻止发送并提示。
+- [ ] 实现请求取消：前端 Send 后可 Cancel，后端通过请求 id 管理进行中的任务。
+- [x] 限制响应体默认读取大小，超过阈值时保存截断提示。
+- [x] 请求完成后写入 `api_request_history`，失败请求也保留。
+- [x] 历史记录保存时脱敏 Authorization、Cookie、Set-Cookie、token/password/key/secret 类字段。
+- [x] 网络错误区分 DNS、连接拒绝、超时、TLS、重定向过多、响应体解码失败，便于排查。
+
+## Phase 40：请求构建与响应 UI
+
+- [x] 实现 `RequestWorkspace`：method + URL 输入区、Send/Cancel、Save。
+- [x] 实现 Params、Headers、Cookies、Auth、Body、Settings 分区表单。
+- [x] Auth 支持 None、Basic、Bearer Token、API Key（header/query）首版类型。
+- [x] Body 编辑支持 raw、JSON、XML、form-urlencoded、multipart、binary，并自动补齐常见 Content-Type。
+- [x] 实现变量解析预览：展示当前环境、命中的变量、缺失变量、secret 脱敏结果。
+- [x] 实现响应面板：Overview、Body、Headers、Cookies、Raw、Timing。
+- [ ] JSON 响应自动格式化，格式化失败回退 Raw；Body 支持搜索、复制、保存到文件。
+- [x] 显示状态码、耗时、响应大小、Content-Type。
+- [ ] 支持多个请求 Tab，关闭未保存 Tab 前提示确认。
+- [ ] 支持请求 Tab 的 dirty 状态、重复打开去重和快捷保存。
+- [x] 支持从历史或集合打开请求后自动跳转 Workspace。
+- [x] 对危险/敏感操作不做额外拦截，但在保存历史和复制分享时默认脱敏。
+
+## Phase 41：集合、环境与历史
+
+- [x] 实现 Collections 列表：集合、文件夹、请求 CRUD。
+- [ ] 实现请求保存到集合、复制请求、移动请求、删除请求。
+- [x] 实现 Environments 管理：变量 CRUD、当前环境切换、secret 字段加密存储、变量启用/禁用。
+- [x] 实现 History 列表、详情、复跑、删除单条、清空全部。
+- [ ] History 支持按 method、host、status、时间范围搜索过滤，并限制默认展示最近 200 条。
+- [x] 支持导入/导出 DevNexus API Collection JSON。
+- [x] 支持基础 cURL 导入：解析 method、url、headers、body。
+- [ ] 支持导出脱敏副本：secret、Authorization、Cookie 默认替换为占位符。
+- [x] 支持从历史保存为集合请求，避免调试成功后需要手动重建。
+- [x] 首版不做完整 Postman Collection v2.1 兼容，仅预留后续扩展。
+
+## Phase 42：文档、验证与发布准备
+
+- [x] 版本升至 `0.7.0`，同步更新 `package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json`。
+- [x] 新增 `docs/releases/v0.7.0.md`。
+- [x] README 增加 API Debugger 中英文说明。
+- [x] README 明确 API Debugger 首版范围：支持 HTTP 调试、集合、环境、历史、cURL 导入；暂不承诺完整 Postman Collection/脚本生态兼容。
+- [x] 补充安全说明：secret 加密、历史脱敏、导出脱敏、响应体大小限制。
+- [ ] 新增或更新测试：插件注册、变量替换、脱敏、历史保存、cURL 导入、请求模型序列化。
+- [x] 更新 `PLAN.md` 开发进度，按日期和具体时间点记录。
+- [x] 运行 `npm test`。
+- [x] 运行 `npm run build`。
+- [x] 运行 `cd src-tauri && cargo check`。
+- [x] 运行 `npm run tauri build -- --bundles nsis`。
+
 ## 开发进度（实时）
 
 ### 2026-04-27
@@ -1214,7 +1359,7 @@ src-tauri/src/plugins/s3/
 - 11:22-13:44 完成打包与多轮修复：输出 Windows 安装包并按反馈修复连接页双击连接/跳转、DB 切换位置与 UI 布局、SSH 密钥文件权限处理与隐藏控制台窗口。
 - 13:44-14:30 修复跳板机终端可用性与显示问题：修复 `openSession` 输出初始化时序，避免欢迎信息被清空；`TerminalTab` 改为增量写入，避免全量重绘造成交互异常；统一终端容器高度链路，消除下半白屏并铺满可用空间。
 - 14:17-14:30 按当前产品决策下线 SFTP：前后端入口、命令导出、模块与类型定义全部移除。
-- 15:16-15:19 完成最终验证与打包：`cargo check` 通过、`npm run build` 通过、`npm test` 通过，并生成 NSIS 安装包 `src-tauri/target/release/bundle/nsis/RDMM_0.1.0_x64-setup.exe`。
+- 15:16-15:19 完成最终验证与打包：`cargo check` 通过、`npm run build` 通过、`npm test` 通过，并生成当时版本 NSIS 安装包（品牌重命名前的旧产物名）。
 - 15:25-15:32 完成品牌图标升级：新增抽象几何科技风 SVG 母版 `src-tauri/icons/app-icon.svg`，使用 `tauri icon` 生成并覆盖全套平台图标（`icon.ico`/`icon.icns`/PNG/Appx/iOS/Android 资产），用于应用窗口与安装包统一视觉。
 - 16:25-16:38 执行清理后重打包：清理 `dist` 与 `src-tauri/target` 旧产物（含 installer/exe 输出），基于新图标资源重新执行 `npm run tauri build -- --bundles nsis`，生成全新安装包并确认时间戳更新（16:37）。
 - 16:50-16:59 修复 Windows 无边框窗口交互：标题栏拖拽改为显式 `startDragging()`，新增窗口四边与四角 resize 命中层并调用 `startResizeDragging()`，同时补充 capability 权限 `allow-start-dragging/allow-start-resize-dragging`，恢复窗口移动与放大缩小能力。
@@ -1223,14 +1368,14 @@ src-tauri/src/plugins/s3/
 - 20:20-20:37 继续第三期 Phase 14 起步：后端新增 `cmd_s3_list_buckets(conn_id)`（连接后列出 Bucket）；前端新增 `BucketList.tsx` 并在 `s3-client/index.tsx` 增加 Connections/Buckets 分段导航，连接后自动加载 Bucket 列表。验证通过：`cargo check`、`npm run build`、`npm test`。
 - 20:50-21:13 推进 Phase 14：补齐 `cmd_s3_create_bucket`、`cmd_s3_delete_bucket` 并注册到 Tauri；前端 `BucketList.tsx` 增加新建 Bucket Modal 与删除确认操作，连接后可直接完成 Bucket 列表刷新、新建、删除闭环。验证通过：`cargo check`、`npm run build`、`npm test`。
 - 21:40-22:06 推进 Phase 15 基础对象浏览：后端新增 `cmd_s3_list_objects`（prefix + delimiter + continuation token 分页），并补充 `cmd_s3_delete_object`、`cmd_s3_create_folder`；前端新增 `ObjectBrowser.tsx`，支持目录进入、前缀刷新、加载更多、文件删除、新建文件夹，形成“连接 -> Bucket -> 对象”基础闭环。验证通过：`cargo check`、`npm run build`、`npm test`。
-- 22:06-22:21 输出第三期阶段性安装包：在完成 S3 Phase 13 + 14 + 15 基础能力后执行 `npm run tauri build -- --bundles nsis`，生成最新安装包 `src-tauri/target/release/bundle/nsis/RDMM_0.1.0_x64-setup.exe`（22:20）。
+- 22:06-22:21 输出第三期阶段性安装包：在完成 S3 Phase 13 + 14 + 15 基础能力后执行 `npm run tauri build -- --bundles nsis`，生成当时版本 NSIS 安装包（品牌重命名前的旧产物名，22:20）。
 - 23:47-23:55 修复 S3 导航与分页链路：将 S3 workspace tab 提升到 Zustand（Connections/Buckets/Objects 共享），连接成功后自动跳转 Buckets、打开 Bucket 后自动跳转 Objects；Bucket 列表改为可控分页（支持翻页与每页条数切换）并在筛选变更时重置页码；打开 Bucket 时重置 prefix 并立即触发对象加载，修复 Objects 视图空白问题。验证通过：`cargo check`、`npm run build`、`npm test`。
 
 ### 2026-04-29
 
 - 00:08-00:11 接入 macOS 自动打包 CI：新增 `.github/workflows/build-macos.yml`，支持 `workflow_dispatch`、`push main`、`v*` tag 触发；在 `macos-latest` 上执行 `npm ci` + `npm run tauri build -- --bundles app,dmg`，并上传 `.app` 与 `.dmg` 构建产物。
 - 00:20-00:27 扩展 CI 为全平台打包：将 workflow 升级为 `build-desktop`，新增 Windows（NSIS `.exe`）、macOS（`.app`/`.dmg`）、Linux（`.deb`/`.AppImage`）三个并行 job，统一支持 `workflow_dispatch`、`push main`、`v*` tag 触发并上传对应 artifacts。
-- 13:08-13:13 品牌重命名：项目名由 RDMM 升级为 DevNexus（开发工具中枢）。已同步更新应用标题、Tauri productName/identifier（com.devnexus.desktop）、Rust crate 名（devnexus/devnexus_lib）、前端品牌文案、README 与跨平台 CI 产物命名。验证通过：`npm run build`、`cargo check`、`npm test`。
+- 13:08-13:13 品牌重命名：项目名升级为 DevNexus（开发工具中枢）。已同步更新应用标题、Tauri productName/identifier（com.devnexus.desktop）、Rust crate 名（devnexus/devnexus_lib）、前端品牌文案、README 与跨平台 CI 产物命名。验证通过：`npm run build`、`cargo check`、`npm test`。
 - 13:20-13:31 发版流程建设：新增 `.github/workflows/release.yml`，在 `v*` tag 触发时并行构建 Windows/macOS/Linux 包并自动上传到 GitHub Release；新增发布说明 `docs/releases/v0.1.0.md`；将 `build-desktop` 标签触发调整为仅 `workflow_dispatch` + `push main`，避免与 release 工作流重复构建。
 - 16:00-16:05 Redis KeyBrowser 交互增强：实现 Key Tree 与 Key Detail 可拖拽分栏，支持中线拖动实时调整宽度，并添加最小宽度保护（左 300px / 右 420px）与分割条高亮反馈。同步新增发版文档 `docs/releases/v0.2.0.md`。
 
@@ -1243,21 +1388,59 @@ src-tauri/src/plugins/s3/
 
 ### 2026-05-08
 
-
-- 12:00-12:05 启动第五期 MySQL 数据库连接工具插件开发：已将 Phase 27-33 详细计划写入 `PLAN.md`，开始按 MongoDB 插件模式实现 MySQL 后端与前端闭环。
-- 13:05-18:25 完成第五期验证与 Windows 打包：`npm test` 通过，`npm run tauri build -- --bundles nsis` 生成 `DevNexus_0.5.0_x64-setup.exe`；打包命令因超时未返回完整日志，但产物时间戳与 release exe 已确认。
-- 12:48-13:05 完成第五期集成修正：修复 MySQL 依赖接入、前端类型构建问题；`npm run build` 通过，`cargo check` 通过（保留既有 RedisConnectionType 未使用告警）。
-- 12:30-12:48 完成 MySQL 前端主链路初版：新增 `mysql-client` 插件、连接表单/列表、数据库表浏览、Table Data、SQL、Indexes、Import/Export、Server 页面，并注册到内置插件。
-- 12:05-12:30 完成 MySQL 后端主链路初版：新增 `mysql_connections`/`mysql_query_history` 表、连接配置加密 repo、MySQL pool、Tauri commands，覆盖连接、库表、数据 CRUD、SQL、索引、导入导出与 Server 状态。
 - 09:00-09:16 修复 Redis Server 页面缩放后不能滚动：Redis 工作区改为固定高度 flex，Server 页面增加独立纵向/横向滚动容器，避免窗口缩放后下方内容不可见。
 - 09:30-09:40 完成第四期 MongoDB 插件详细规划写入 `PLAN.md`，新增 Phase 20-26 任务拆分。
 - 09:40-10:05 完成 MongoDB 后端基础：新增 `mongodb_connections`/`mongodb_query_history` 表、连接配置加密 repo、MongoDB client pool、Tauri commands，并通过 `cargo check` 验证。
-- 10:05-10:35 完成 MongoDB 前端主链路初版：新增 `mongodb-client` 插件、连接表单、连接列表、数据库/集合浏览、文档 CRUD、查询/聚合、索引、导入导出和 Server 状态页面。
+- 10:05-10:35 完成 MongoDB 前端主链路初版：新增 `mongodb-client` 插件、连接表单、数据库/集合浏览、文档 CRUD、查询/聚合、索引、导入导出和 Server 状态页面。
 - 10:35-10:56 完成第四期发布配套与验证：版本升至 `0.4.0`，新增 `docs/releases/v0.4.0.md`，README 增加 MongoDB 插件说明；`cargo check`、`npm test`、`npm run build`、`npm run tauri build -- --bundles nsis` 均通过，生成 `DevNexus_0.4.0_x64-setup.exe`。
 - 11:00-11:05 优化 MongoDB Connections 标签尺寸：状态、默认数据库、TLS、SRV 标签改为小号样式，仅作用于 MongoDB 连接卡片；`npm run build` 验证通过。
 - 11:49-11:56 执行 v0.4.0 发布前验证与打包：`npm test`、`cargo check`、`npm run build`、`npm run tauri build -- --bundles nsis` 通过，重新生成 `DevNexus_0.4.0_x64-setup.exe`，准备提交并推送 `v0.4.0` tag 触发 GitHub Release。
+- 12:00-12:05 启动第五期 MySQL 数据库连接工具插件开发：已将 Phase 27-33 详细计划写入 `PLAN.md`，开始按 MongoDB 插件模式实现 MySQL 后端与前端闭环。
+- 12:05-12:14 完成 Phase 27 后端基础：新增 `mysql_connections` 表、`mysql_query_history` 表、连接配置加密 repo、MySQL 类型定义与 pool 骨架。
+- 12:14-12:30 完成 Phase 27 命令闭环：接入 `mysql_async`，实现连接保存/删除/测试/连接/断开命令，并注册到 Tauri handler。
+- 12:30-12:38 完成 Phase 27 前端连接管理：新增 `mysql-client` 插件入口、类型、store、连接列表和连接表单，连接成功后自动跳转数据库视图。
+- 12:38-12:44 完成 Phase 28 数据库与表浏览：实现库列表、表列表、表结构、表状态后端命令，并新增 `DatabaseBrowser.tsx`。
+- 12:44-12:48 完成 Phase 29 表数据 CRUD：实现分页读取、新增、编辑、删除；前端新增 `TableData.tsx`，无主键表保持只读。
+- 12:48-12:54 完成 Phase 30 SQL 查询工作区：实现 SQL 执行、历史记录、危险 SQL 二次确认提示，并新增 `SqlWorkspace.tsx`。
+- 12:54-12:58 完成 Phase 31 索引管理：实现索引列表、创建、删除命令，并新增 `IndexManager.tsx`。
+- 12:58-13:02 完成 Phase 32 导入导出：实现 JSON/CSV 导出、导入文件选择、预览、insertOnly/replaceInto 导入，并新增 `ImportExport.tsx`。
+- 13:02-13:05 完成 Phase 33 Server 信息与集成修正：新增 MySQL Server 状态页面，修复 MySQL 依赖接入和前端类型构建问题；`npm run build` 通过，`cargo check` 通过（保留既有 `RedisConnectionType` 未使用告警）。
+- 13:05-18:25 完成第五期验证与 Windows 打包：`npm test` 通过，`npm run tauri build -- --bundles nsis` 生成 `DevNexus_0.5.0_x64-setup.exe`；打包命令因超时未返回完整日志，但产物时间戳与 release exe 已确认。
+
+### 2026-05-12
+
+- 17:06 完成第六期端口/网络诊断工具规划回写：在第五期 MySQL 之后追加“第六期：端口/网络诊断工具插件”，按 Phase 34-37 拆分脚手架、核心诊断命令、诊断 UI/历史复跑、文档验证与发布准备。
+- 17:10 启动第六期 Network 端口/网络诊断工具开发：开始按 Phase 34-37 实施，要求后续开发进度实时回写 PLAN.md，最终同步 README 与发布文档。
+- 17:18 完成 Phase 34/35 后端主链路初版：新增 `network_diagnostic_history` 表、`plugins/network` 后端模块、TCP/Ping/DNS/Traceroute 探测命令和历史查询/删除/清空命令，并注册到 Tauri handler。
+- 17:28 完成 Phase 36 前端主链路初版：新增 `network-tools` 插件、Diagnostics 动态表单、统一结果面板、History 列表/详情/复跑/删除/清空，并补充内置插件注册测试。
+- 17:35 完成 Phase 37 文档与发布配套初版：版本升至 `0.6.0`，新增 `docs/releases/v0.6.0.md`，README 增加 Network Tools 中英文说明，并将第六期 Phase 34-37 任务勾选完成。
+- 17:42 完成第六期阶段验证：`cargo check` 通过（仅保留既有 `RedisConnectionType` 未使用告警），`npm run build` 通过（保留 Vite 大 chunk 告警），`npm test` 通过（2 个测试文件、3 个用例）。
+- 17:46 完成第六期 Windows 打包：执行 `npm run tauri build -- --bundles nsis` 成功，生成 `src-tauri/target/release/bundle/nsis/DevNexus_0.6.0_x64-setup.exe`。
+- 17:50 完成最终一致性检查：同步 `package-lock.json` 顶层版本到 `0.6.0`，还原无关 `cargo fmt` 改动，复跑 `cargo check`、`npm run build`、`npm test` 与 `git diff --check` 均通过。
+- 18:05 修复 Network 诊断反馈问题：Windows `ping/tracert` 输出改为 GBK 解码并隐藏系统命令窗口，修正 Ping 统计解析，收紧 Traceroute 默认 max_hops/timeout 与总等待上限，并按产品决策移除 HTTP 探测入口，后续 HTTP/API 调试独立规划。
+- 18:07 完成 Network 修复验证：`cargo check`、`npm run build`、`npm test` 通过；新增代码不再引入额外 Rust warning，仅保留既有 `RedisConnectionType` 未使用告警与 Vite 大 chunk 告警。
+- 18:13 完成 Network 修复后重打包：首次打包因旧 `devnexus.exe` 进程占用失败，结束进程后重试 `npm run tauri build -- --bundles nsis` 成功，重新生成 `DevNexus_0.6.0_x64-setup.exe`。
+- 18:20 优化左侧导航数据库工具组织：新增可折叠 `DB Tools` 分组，将 Redis、MongoDB、MySQL 收纳到同一组，为后续 PostgreSQL/SQLite 等数据库插件预留统一入口。
+- 18:24 完成 DB Tools 导航优化验证与重打包：`npm run build`、`npm test` 通过；首次打包因旧 `devnexus.exe` 进程占用失败，结束进程后重试 NSIS 打包成功。
+- 18:32 修复侧边栏收起态 DB 工具识别与切换问题：收起态下 `DB Tools` 支持展开具体数据库图标，Redis/MongoDB/MySQL 可直接切换且当前工具独立高亮。
+- 18:34 完成侧边栏收起态 DB 修复验证与重打包：`npm run build`、`npm test`、`npm run tauri build -- --bundles nsis` 均通过，安装包已更新。
 
 
+- 12:08 完成第七期 Windows 打包：执行 `npm run tauri build -- --bundles nsis` 成功，生成 `src-tauri/target/release/bundle/nsis/DevNexus_0.7.0_x64-setup.exe`。
+- 12:03 完成第七期阶段验证：`npm test` 通过（3 个测试文件、7 个用例），`npm run build` 通过（保留 Vite 大 chunk 警告），`cargo check` 通过（保留既有 `RedisConnectionType` 未使用告警）。
+- 11:54 完成第七期前端主链路初版：新增 `api-debugger` 插件入口、Zustand store、Workspace/Collections/Environments/History 视图，接入请求构建、变量预览、响应查看、集合保存、环境变量、历史复跑与 cURL 导入。
+- 11:47 完成第七期后端基础初版：新增 `api_debugger` Rust 模块、API 调试 SQLite 表、`reqwest` 运行时依赖、请求预览/发送、集合/文件夹/请求/环境/history/cURL 导入导出命令，并注册到 Tauri handler。
+- 11:37 启动第七期 API Debugger 后续开发：按最新优化后的 Phase 38-42 计划实施，范围包含请求构建/发送、集合与文件夹、环境变量、历史复跑、cURL 导入、脱敏与文档发布配套。
+- 11:25 完成第七期 API 调试工具规划回写：确定以独立 `api-debugger` 插件承接 Postman-like HTTP/API 调试能力，按 Phase 38-42 拆分脚手架与数据模型、HTTP 执行核心、请求/响应 UI、集合/环境/历史、文档验证与发布准备。
+- 11:33 优化第七期 API Debugger 计划：补充变量解析预览、Cookies/Auth/Body 类型、请求取消、响应体大小限制、历史脱敏与过滤、导出脱敏、安全说明和测试验收项，使首版范围更接近可日常使用的 Postman-like 调试工具。
+- 09:35 清理项目品牌残留：将文档、前端样式/DOM 前缀、默认 SSH key 名、本地存储 key、S3 credential provider、本地数据库与密钥文件名统一更新为 DevNexus/devnexus；对旧本地数据库和密钥文件提供启动时迁移兼容。
+- 09:45 完成 DevNexus 品牌残留清理验证与重打包：全局搜索仅保留旧数据库/密钥迁移常量；`npm run build`、`npm test`、`cargo check`、`npm run tauri build -- --bundles nsis` 均通过。
+
+- 09:00 修复侧边栏收起态 DB Tools 闪动与无法展开问题：收起态改为常驻显示 Redis/MongoDB/MySQL 具体图标，不再依赖点击展开动画状态；展开态继续保留 DB Tools 折叠能力。
+- 09:08 按反馈调整侧边栏收起态 DB Tools：取消常驻数据库图标列表，改为单个 DB 入口 + 下拉菜单切换 Redis/MongoDB/MySQL；DB 入口图标显示当前选中的数据库工具，保持折叠态可识别且可切换。
+- 09:12 完成侧边栏 DB Tools 折叠态下拉菜单验证与重打包：`npm run build`、`npm test`、`npm run tauri build -- --bundles nsis` 均通过，安装包已更新。
+- 09:20 优化 MongoDB Connections 标签尺寸：将连接卡片中的状态、默认库、TLS、SRV 标签进一步压缩为 10px 字号、16px 行高和更小内边距，降低卡片视觉占用。
+- 09:25 完成 MongoDB 标签尺寸优化验证与重打包：`npm run build`、`npm test`、`npm run tauri build -- --bundles nsis` 均通过，安装包已更新。
 
 
 

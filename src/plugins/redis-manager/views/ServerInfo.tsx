@@ -79,14 +79,14 @@ export function ServerInfo() {
   }, [connId, refresh]);
 
   useSimpleChart(
-    "rdmm-memory-chart",
+    "devnexus-memory-chart",
     memorySeries,
   );
   useSimpleChart(
-    "rdmm-ops-chart",
+    "devnexus-ops-chart",
     opsSeries,
   );
-  useDbBarChart("rdmm-db-bar-chart", dbSize);
+  useDbBarChart("devnexus-db-bar-chart", dbSize);
 
   if (!connId) {
     return (
@@ -97,8 +97,8 @@ export function ServerInfo() {
   }
 
   return (
-    <div className="rdmm-server-info">
-      <Space direction="vertical" size={12} className="rdmm-server-info__body">
+    <div className="devnexus-server-info">
+      <Space direction="vertical" size={12} className="devnexus-server-info__body">
         <Row gutter={12}>
           <Col span={6}>
             <Card loading={loading}>
@@ -130,12 +130,12 @@ export function ServerInfo() {
         <Row gutter={12}>
           <Col span={12}>
             <Card title="Memory Trend">
-              <div id="rdmm-memory-chart" style={{ height: 240 }} />
+              <div id="devnexus-memory-chart" style={{ height: 240 }} />
             </Card>
           </Col>
           <Col span={12}>
             <Card title="Ops Trend">
-              <div id="rdmm-ops-chart" style={{ height: 240 }} />
+              <div id="devnexus-ops-chart" style={{ height: 240 }} />
             </Card>
           </Col>
         </Row>
@@ -143,7 +143,7 @@ export function ServerInfo() {
           title="DB Size"
           extra={refreshing ? <Typography.Text type="secondary">Refreshing...</Typography.Text> : null}
         >
-          <div id="rdmm-db-bar-chart" style={{ height: 220, marginBottom: 12 }} />
+          <div id="devnexus-db-bar-chart" style={{ height: 220, marginBottom: 12 }} />
           <Table
             size="small"
             pagination={false}

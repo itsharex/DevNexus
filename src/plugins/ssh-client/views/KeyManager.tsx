@@ -8,7 +8,7 @@ export function KeyManager() {
   const { message } = App.useApp();
   const [importOpen, setImportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
-  const [generateName, setGenerateName] = useState("rdmm-key");
+  const [generateName, setGenerateName] = useState("devnexus-key");
   const [generateType, setGenerateType] = useState<"ed25519" | "rsa">("ed25519");
 
   const keys = useSshKeysStore((state) => state.keys);

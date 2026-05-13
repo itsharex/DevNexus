@@ -168,9 +168,36 @@ pub fn run() {
             plugins::mysql::commands::cmd_mysql_pick_import_file,
             plugins::mysql::commands::cmd_mysql_preview_import_file,
             plugins::mysql::commands::cmd_mysql_import_rows,
-            plugins::mysql::commands::cmd_mysql_get_server_status,            plugins::mongodb::commands::cmd_mongo_get_server_status
+            plugins::mysql::commands::cmd_mysql_get_server_status,
+            plugins::mongodb::commands::cmd_mongo_get_server_status,
+            plugins::network::commands::cmd_network_tcp_check,
+            plugins::network::commands::cmd_network_ping,
+            plugins::network::commands::cmd_network_dns_lookup,
+            plugins::network::commands::cmd_network_traceroute,
+            plugins::network::commands::cmd_network_list_history,
+            plugins::network::commands::cmd_network_delete_history,
+            plugins::network::commands::cmd_network_clear_history,
+            plugins::api_debugger::commands::cmd_api_preview_request,
+            plugins::api_debugger::commands::cmd_api_send_request,
+            plugins::api_debugger::commands::cmd_api_cancel_request,
+            plugins::api_debugger::commands::cmd_api_list_collections,
+            plugins::api_debugger::commands::cmd_api_save_collection,
+            plugins::api_debugger::commands::cmd_api_delete_collection,
+            plugins::api_debugger::commands::cmd_api_list_folders,
+            plugins::api_debugger::commands::cmd_api_save_folder,
+            plugins::api_debugger::commands::cmd_api_delete_folder,
+            plugins::api_debugger::commands::cmd_api_list_requests,
+            plugins::api_debugger::commands::cmd_api_save_request,
+            plugins::api_debugger::commands::cmd_api_delete_request,
+            plugins::api_debugger::commands::cmd_api_list_environments,
+            plugins::api_debugger::commands::cmd_api_save_environment,
+            plugins::api_debugger::commands::cmd_api_delete_environment,
+            plugins::api_debugger::commands::cmd_api_list_history,
+            plugins::api_debugger::commands::cmd_api_delete_history,
+            plugins::api_debugger::commands::cmd_api_clear_history,
+            plugins::api_debugger::commands::cmd_api_import_curl,
+            plugins::api_debugger::commands::cmd_api_export_collection_json
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

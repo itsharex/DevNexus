@@ -78,7 +78,7 @@ export function AppShell() {
   ];
 
   return (
-    <Layout className="rdmm-layout">
+    <Layout className="devnexus-layout">
       {appWindow &&
         edgeOverlays.map((item) => (
           <div
@@ -99,15 +99,15 @@ export function AppShell() {
           />
         ))}
       <Titlebar />
-      <Layout hasSider className="rdmm-layout__main">
+      <Layout hasSider className="devnexus-layout__main">
         <Sidebar />
         <Layout>
-          <Content className="rdmm-layout__content">
-            <div className="rdmm-layout__content-card">
+          <Content className="devnexus-layout__content">
+            <div className="devnexus-layout__content-card">
               <PluginRouter />
             </div>
           </Content>
-          <Footer className="rdmm-layout__footer">
+          <Footer className="devnexus-layout__footer">
             <Typography.Text type="secondary">
               Sidebar:
               <Tag color="blue">{sidebarCollapsed ? "64px" : "200px"}</Tag>

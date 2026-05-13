@@ -85,7 +85,7 @@ export function TerminalWorkspace() {
       }}
     >
       <Tabs
-        className="rdmm-terminal-tabs"
+        className="devnexus-terminal-tabs"
         type="editable-card"
         hideAdd
         style={{ height: "100%", minHeight: 0 }}
