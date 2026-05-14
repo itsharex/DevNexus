@@ -304,6 +304,75 @@ body,
   min-height: 0;
 }
 
+.devnexus-terminal-workspace {
+  height: 100%;
+  min-height: 0;
+}
+
+.devnexus-terminal-workspace--fullscreen {
+  position: fixed;
+  inset: 40px 0 0 0;
+  z-index: 1000;
+  padding: 10px;
+  background: var(--devnexus-header-bg, #f5f7fb);
+}
+
+.devnexus-terminal-card .ant-card-head {
+  min-height: 44px;
+}
+
+.devnexus-terminal-card .xterm {
+  padding: 8px 8px 18px;
+}
+
+.devnexus-terminal-card--fullscreen .xterm {
+  padding-bottom: 26px;
+}
+
+.devnexus-terminal-suggestions {
+  min-height: 30px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding-top: 6px;
+  overflow: hidden;
+}
+
+.devnexus-terminal-suggestion {
+  max-width: 220px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  padding: 0 8px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--devnexus-text-strong, #1f2937);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.devnexus-terminal-suggestion:hover {
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.devnexus-terminal-suggestion span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.devnexus-terminal-suggestion em {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 10px;
+  font-style: normal;
+}
+
 .devnexus-key-browser-split {
   display: flex;
   width: 100%;

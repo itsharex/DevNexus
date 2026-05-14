@@ -1538,7 +1538,12 @@ src-tauri/src/plugins/s3/
 - 09:20 优化 MongoDB Connections 标签尺寸：将连接卡片中的状态、默认库、TLS、SRV 标签进一步压缩为 10px 字号、16px 行高和更小内边距，降低卡片视觉占用。
 - 09:25 完成 MongoDB 标签尺寸优化验证与重打包：`npm run build`、`npm test`、`npm run tauri build -- --bundles nsis` 均通过，安装包已更新。
 
+### 2026-05-13
 
+- 16:05 查看 GitHub issue #1“关于SSH的功能拓展”，确认范围为 SSH 终端全屏、底部留白和命令提示。
+- 16:13-16:18 完成 SSH 终端体验优化：`TerminalWorkspace` 支持单标签全屏；`TerminalTab` 增加全屏按钮、xterm 底部内边距和命令建议条；新增 `command-suggestions` 工具函数与 Vitest 覆盖。
+- 16:18 完成 v0.7.1 发布配套初版：同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 版本至 `0.7.1`，新增 `docs/releases/v0.7.1.md`。
+- 16:20-16:32 完成 v0.7.1 验证与打包：`npm test`、`npm run build`、`cargo check`、`npm run tauri build -- --bundles nsis` 均通过，生成 `src-tauri/target/release/bundle/nsis/DevNexus_0.7.1_x64-setup.exe`。
 
 
 
