@@ -196,7 +196,20 @@ pub fn run() {
             plugins::api_debugger::commands::cmd_api_delete_history,
             plugins::api_debugger::commands::cmd_api_clear_history,
             plugins::api_debugger::commands::cmd_api_import_curl,
-            plugins::api_debugger::commands::cmd_api_export_collection_json
+            plugins::api_debugger::commands::cmd_api_export_collection_json,
+            plugins::mq::commands::cmd_mq_list_connections,
+            plugins::mq::commands::cmd_mq_save_connection,
+            plugins::mq::commands::cmd_mq_delete_connection,
+            plugins::mq::commands::cmd_mq_test_connection,
+            plugins::mq::commands::cmd_mq_browse,
+            plugins::mq::commands::cmd_mq_publish,
+            plugins::mq::commands::cmd_mq_consume_preview,
+            plugins::mq::commands::cmd_mq_list_history,
+            plugins::mq::commands::cmd_mq_delete_history,
+            plugins::mq::commands::cmd_mq_clear_history,
+            plugins::mq::commands::cmd_mq_list_saved_messages,
+            plugins::mq::commands::cmd_mq_save_message_template,
+            plugins::mq::commands::cmd_mq_delete_message_template
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

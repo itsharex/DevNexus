@@ -3,6 +3,7 @@ import { apiDebuggerPlugin } from "@/plugins/api-debugger";
 import { redisManagerPlugin } from "@/plugins/redis-manager";
 import { mongodbClientPlugin } from "@/plugins/mongodb-client";
 import { mysqlClientPlugin } from "@/plugins/mysql-client";
+import { mqClientPlugin } from "@/plugins/mq-client";
 import { networkToolsPlugin } from "@/plugins/network-tools";
 import { s3ClientPlugin } from "@/plugins/s3-client";
 import { sshClientPlugin } from "@/plugins/ssh-client";
@@ -21,6 +22,7 @@ export function registerBuiltinPlugins(): void {
   register(mysqlClientPlugin);
   register(networkToolsPlugin);
   register(apiDebuggerPlugin);
+  register(mqClientPlugin);
   initialized = true;
 }
 
