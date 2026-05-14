@@ -234,6 +234,48 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
           response_json TEXT NOT NULL,
           created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS mq_connections (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          group_name TEXT,
+          broker_type TEXT NOT NULL,
+          hosts_json TEXT NOT NULL DEFAULT '[]',
+          username TEXT,
+          password_encrypted TEXT,
+          connect_timeout INTEGER NOT NULL DEFAULT 10,
+          rabbitmq_json TEXT,
+          rabbitmq_management_password_encrypted TEXT,
+          kafka_json TEXT,
+          kafka_sasl_password_encrypted TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS mq_message_history (
+          id TEXT PRIMARY KEY NOT NULL,
+          broker_type TEXT NOT NULL,
+          connection_id TEXT NOT NULL,
+          operation_type TEXT NOT NULL,
+          target TEXT NOT NULL,
+          status TEXT NOT NULL,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          request_json TEXT NOT NULL,
+          result_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS mq_saved_messages (
+          id TEXT PRIMARY KEY NOT NULL,
+          broker_type TEXT NOT NULL,
+          name TEXT NOT NULL,
+          target TEXT,
+          body_json TEXT NOT NULL,
+          headers_json TEXT NOT NULL DEFAULT '[]',
+          properties_json TEXT NOT NULL DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
         "#,
     )
     .map_err(|err| format!("failed to initialize schema: {err}"))?;

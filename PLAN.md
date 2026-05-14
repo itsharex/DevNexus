@@ -1330,6 +1330,99 @@ src-tauri/src/plugins/s3/
 - [x] 运行 `cd src-tauri && cargo check`。
 - [x] 运行 `npm run tauri build -- --bundles nsis`。
 
+---
+
+# 第八期：统一 MQ 调试与管理工具
+
+> 目标：新增统一 `mq-client` 插件，提供 RabbitMQ 与 Kafka 的日常管理和消息调试能力，覆盖连接管理、资源浏览、消息发送、临时消费/预览、基础统计与历史复跑。
+
+---
+
+## 第八期技术选型增量
+
+| 新增项 | 方案 | 说明 |
+|--------|------|------|
+| RabbitMQ AMQP | `lapin` | 用于 AMQP 连接测试、消息发布、临时消费/预览 |
+| RabbitMQ 管理接口 | RabbitMQ Management HTTP API | 用于队列、交换机、绑定、基础统计浏览；Management Plugin 不可用时给出明确提示 |
+| Kafka 客户端 | `rdkafka` | 用于 Kafka metadata、produce、consume 与 consumer group/offset 只读查看 |
+| MQ 数据存储 | SQLite + JSON 字段 | 保存连接配置、消息历史、发送/消费快照和错误摘要 |
+| 敏感字段处理 | AES-GCM + 历史脱敏 | 连接密码、Management 密码、SASL 密码加密存储；历史记录默认脱敏 |
+| 消息体处理 | UTF-8 文本 + JSON 预览 + Base64 兜底 | 文本/JSON 直接展示，二进制消息以 Base64 保存和复制，避免历史记录损坏 |
+| 操作安全 | 只读优先 + 显式确认 | 首版浏览与调试为主，删除/purge/offset commit 等破坏性操作不进入默认范围 |
+
+---
+
+## Phase 43：MQ 插件脚手架与连接模型
+
+- [x] 新增 `mq-client` 前端插件入口、类型定义、Zustand store 与基础布局。
+- [x] 新增 Rust 后端模块 `src-tauri/src/plugins/mq/{mod,types,commands,rabbitmq,kafka}.rs`。
+- [x] 在 `plugins/mod.rs` 与 `lib.rs` 注册 MQ 模块和 Tauri commands。
+- [x] 新增 SQLite 表：`mq_connections`、`mq_message_history`、`mq_saved_messages`。
+- [x] 定义统一连接模型：broker_type、name、group_name、hosts、username/password、connect_timeout、created_at、updated_at。
+- [x] RabbitMQ 连接字段覆盖 AMQP 地址、vhost、Management API 地址与 Management 账号密码。
+- [x] Kafka 连接字段覆盖 bootstrap servers、client id、security protocol、SASL/PLAIN 账号密码，并预留 TLS 字段。
+- [x] 连接配置支持分组、复制、编辑、删除、测试连接，并对密码字段做 AES-GCM 加密。
+- [x] 后端连接测试返回结构化诊断：连接阶段、认证阶段、权限/Management API 阶段、错误摘要。
+- [x] 连接成功后根据 broker type 自动进入 RabbitMQ 或 Kafka 浏览页。
+- [x] 增加基础模型测试：连接配置脱敏、消息体编码、历史快照序列化兼容。
+
+## Phase 44：RabbitMQ 日常管理与调试
+
+- [x] 实现 RabbitMQ AMQP 连接测试。
+- [x] 实现 RabbitMQ Management API 可用性测试；不可用时保留已知队列的发送/消费能力并提示浏览受限。
+- [x] 实现 Queue 列表、详情、消息数、消费者数、ready/unacked、durable、exclusive、auto-delete 和状态展示。
+- [x] 实现 Exchange 列表、类型、durable、auto-delete 展示。
+- [x] 实现 Binding 列表，并支持按 queue/exchange 过滤。
+- [x] 实现消息发布：支持 exchange/routing key 或直接队列、properties、headers、content type、delivery mode、raw text/JSON/binary body。
+- [x] 实现临时消费/预览：支持 queue、limit、timeout、ack 模式、prefetch 限制。
+- [x] 默认消费预览使用 `nack requeue=true`，只有用户显式选择 ack 时才确认消息。
+- [x] 消费预览默认限制最大条数和总等待时间，避免长时间占用队列消费者。
+- [x] 不在首版提供 queue purge/delete、exchange delete 等破坏性管理操作；后续需要二次确认机制再加入。
+- [x] RabbitMQ 发送、消费预览和错误写入 `mq_message_history`，保存脱敏快照。
+
+## Phase 45：Kafka 日常管理与调试
+
+- [x] 实现 Kafka 连接测试并读取 cluster metadata。
+- [x] 展示 broker、controller、topic 数等基础信息。
+- [x] 实现 Topic 列表、partition 数、replication factor、cleanup policy、retention 基础配置展示。
+- [x] 实现 Topic 详情：partition metadata、leader、replicas、ISR。
+- [x] 实现 Consumer Group 列表与 group offsets 只读查看。
+- [x] 实现消息发送：支持 topic、key、headers、partition、timestamp、raw text/JSON/binary body。
+- [x] 实现临时消费/预览：支持 earliest/latest/specific offset、partition 过滤、limit、timeout。
+- [x] 默认消费预览不提交 offset，禁用 auto commit。
+- [x] Kafka 首版不创建/删除 topic，不提交 consumer group offset，不修改 broker/topic 配置。
+- [x] 消费预览必须使用临时 group id 或 assign 模式，避免影响真实业务 consumer group。
+- [x] 消息 key/value/header 按 UTF-8 尝试解析，失败时用 Base64 展示并保留原始大小。
+- [x] Kafka 发送、消费预览和错误写入 `mq_message_history`，保存 topic、partition、offset、key、headers、消息大小和错误摘要。
+
+## Phase 46：统一 UI 与历史复跑
+
+- [x] 实现 MQ 插件统一导航：Connections、Browser、Message Studio、History。
+- [x] Browser 左侧资源树根据 broker type 动态显示 RabbitMQ Queues/Exchanges/Bindings 或 Kafka Topics/Consumer Groups/Brokers。
+- [x] Message Studio 根据 broker type 动态切换 RabbitMQ/Kafka 发送与消费表单。
+- [x] Message Studio 支持保存常用消息模板到 `mq_saved_messages`，并可从模板快速填充 publish/produce 表单。
+- [x] 实现统一结果面板：状态、耗时、消息大小、headers/properties、body、错误详情。
+- [x] 结果面板支持 JSON pretty、raw、Base64、复制、保存到文件。
+- [x] 实现 History 列表、详情、复跑、删除单条、清空全部。
+- [x] History 支持按 broker type、连接、topic/queue、操作类型、状态和时间范围筛选。
+- [x] RabbitMQ publish 历史和 Kafka produce 历史可复跑；消费预览历史只复用查询条件。
+- [x] 历史记录、复制分享和导出默认脱敏 password、Authorization、SASL password、Management password 等敏感字段。
+- [x] UI 对 RabbitMQ ack 与 Kafka offset 明确展示“不影响业务消费进度”的默认语义。
+
+## Phase 47：文档、验证与发布准备
+
+- [x] 版本升至 `0.8.0`，同步更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json`。
+- [x] 新增 `docs/releases/v0.8.0.md`。
+- [x] README 增加 MQ 工具中英文说明。
+- [x] README 明确 RabbitMQ 浏览依赖 Management Plugin，Kafka 首版支持 PLAINTEXT 与 SASL/PLAIN，TLS 字段预留但不承诺完整证书链管理。
+- [x] README 明确首版安全边界：不做 queue purge/delete、topic 创建/删除、offset commit 或 broker 配置修改。
+- [x] 新增或更新测试：插件注册、连接配置脱敏、消息体编码、历史快照、RabbitMQ/Kafka 表单状态切换。
+- [x] 更新 `PLAN.md` 开发进度，按日期和具体时间点记录。
+- [x] 运行 `npm test`。
+- [x] 运行 `npm run build`。
+- [x] 运行 `cd src-tauri && cargo check`。
+- [x] 运行 `npm run tauri build -- --bundles nsis`。
+
 ## 开发进度（实时）
 
 ### 2026-04-27
@@ -1426,6 +1519,9 @@ src-tauri/src/plugins/s3/
 - 18:34 完成侧边栏收起态 DB 修复验证与重打包：`npm run build`、`npm test`、`npm run tauri build -- --bundles nsis` 均通过，安装包已更新。
 
 
+
+### 2026-05-13
+
 - 12:08 完成第七期 Windows 打包：执行 `npm run tauri build -- --bundles nsis` 成功，生成 `src-tauri/target/release/bundle/nsis/DevNexus_0.7.0_x64-setup.exe`。
 - 12:03 完成第七期阶段验证：`npm test` 通过（3 个测试文件、7 个用例），`npm run build` 通过（保留 Vite 大 chunk 警告），`cargo check` 通过（保留既有 `RedisConnectionType` 未使用告警）。
 - 11:54 完成第七期前端主链路初版：新增 `api-debugger` 插件入口、Zustand store、Workspace/Collections/Environments/History 视图，接入请求构建、变量预览、响应查看、集合保存、环境变量、历史复跑与 cURL 导入。
@@ -1449,4 +1545,23 @@ src-tauri/src/plugins/s3/
 - 16:18 完成 v0.7.1 发布配套初版：同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 版本至 `0.7.1`，新增 `docs/releases/v0.7.1.md`。
 - 16:20-16:32 完成 v0.7.1 验证与打包：`npm test`、`npm run build`、`cargo check`、`npm run tauri build -- --bundles nsis` 均通过，生成 `src-tauri/target/release/bundle/nsis/DevNexus_0.7.1_x64-setup.exe`。
 
+
+
+- 15:23 完成第八期统一 MQ 组件规划回写：确认采用单一 `mq-client` 插件承接 RabbitMQ/Kafka，按 Phase 43-47 拆分脚手架与连接模型、RabbitMQ 日常管理与调试、Kafka 日常管理与调试、统一 UI 与历史复跑、文档验证与发布准备；当前仅更新规划，等待后续修订优化。
+- 15:34 优化第八期 MQ Client 计划：补充消息体编码、RabbitMQ ack/nack 安全语义、Kafka 临时消费与 offset 边界、消息模板、历史筛选、破坏性操作首版排除、安全文档和测试验收项，使 MQ 调试工具更适合真实队列/主题排查场景。
+
+
+
+
+- 15:52 启动第八期 MQ Client 开发：开始按最新版 Phase 43-47 实施统一 `mq-client` 插件，范围包含 RabbitMQ/Kafka 连接模型、资源浏览、消息发送、临时消费预览、历史模板、安全脱敏、文档验证和打包。
+
+- 16:05 完成 Phase 43 后端与前端脚手架：新增 `mq-client` 插件、`plugins/mq` Rust 模块、`mq_connections`/`mq_message_history`/`mq_saved_messages` 表、连接 CRUD/测试/浏览/历史/模板命令，并注册到 Tauri handler。
+- 16:15 完成 Phase 44/45 MQ 核心能力初版：RabbitMQ 接入 `lapin` 与 Management API，支持队列/交换机/绑定浏览、publish、安全消费预览；Kafka 接入 `rdkafka`，支持 metadata 浏览、topic/partition/broker/group 只读查看、produce、临时 consume 且不提交 offset。
+- 16:22 完成 Phase 46 统一 UI：新增 Connections、Browser、Message Studio、History 四个工作区，支持 RabbitMQ/Kafka 动态表单、消息模板、结果面板、历史筛选/详情/复跑和安全默认语义提示。
+- 16:30 完成第八期前端验证：`npm test` 通过（4 个测试文件、11 个用例），`npm run build` 通过（保留 Vite 大 chunk 警告）。
+- 16:37 完成第八期后端验证与 Windows 打包：安装并接入 CMake 后 `cargo check` 通过（仅保留既有 `RedisConnectionType` 未使用警告），`npm run tauri build -- --bundles nsis` 成功生成 `DevNexus_0.8.0_x64-setup.exe`。
+
+
+
+- 17:24 调整 RabbitMQ publish 语义：Message Studio 允许 Exchange 为空，空值表示 RabbitMQ 默认交换机；Routing Key/Queue 改为必填并作为默认交换机投递队列名，后端同步移除 `__queue__` 特殊占位。
 
