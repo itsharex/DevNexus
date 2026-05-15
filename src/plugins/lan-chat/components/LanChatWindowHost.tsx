@@ -75,6 +75,7 @@ export function LanChatWindowHost() {
   const setActiveConversationId = useLanChatStore((state) => state.setActiveConversationId);
   const dragSession = useRef<DragSession | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const nicknameSetupInitialized = useRef(false);
   const [snapshot, setSnapshot] = useState<LanChatSnapshot | null>(null);
   const [conversations, setConversations] = useState<LanChatConversation[]>([]);
   const [messages, setMessages] = useState<LanChatMessage[]>([]);
@@ -159,8 +160,16 @@ export function LanChatWindowHost() {
   }, [messages.length, activeConversation?.id]);
 
   useEffect(() => {
-    if (!identity?.nicknameRequired || nicknameSetupDismissed) return;
-    form.setFieldsValue({ nickname: "", port: identity.port });
+    if (!identity?.nicknameRequired || nicknameSetupDismissed) {
+      nicknameSetupInitialized.current = false;
+      return;
+    }
+    const currentNickname = form.getFieldValue("nickname") as string | undefined;
+    const currentPort = form.getFieldValue("port") as number | undefined;
+    if (!nicknameSetupInitialized.current) {
+      form.setFieldsValue({ nickname: currentNickname ?? "", port: currentPort ?? identity.port });
+      nicknameSetupInitialized.current = true;
+    }
     setSettingsOpen(true);
   }, [form, identity, nicknameSetupDismissed]);
 
@@ -386,7 +395,7 @@ export function LanChatWindowHost() {
         <Space size={4} onMouseDown={(event) => event.stopPropagation()}>
           <Tag color="green">v0.9.2</Tag>
           <Button size="small" type="text" icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()} />
-          <Button size="small" type="text" icon={<SettingOutlined />} onClick={() => { form.setFieldsValue({ nickname: identity?.nicknameRequired ? "" : identity?.nickname, port: identity?.port ?? 45881 }); setSettingsOpen(true); }} />
+          <Button size="small" type="text" icon={<SettingOutlined />} onClick={() => { const currentNickname = form.getFieldValue("nickname") as string | undefined; form.setFieldsValue({ nickname: identity?.nicknameRequired ? currentNickname ?? "" : identity?.nickname, port: identity?.port ?? 45881 }); setSettingsOpen(true); }} />
           <Button size="small" type="text" icon={<MinusOutlined />} onClick={minimizeWindow} />
           <Button size="small" type="text" icon={<CompressOutlined />} onClick={maximizeWindow} />
           <Button size="small" type="text" icon={<CloseOutlined />} onClick={closeWindow} />

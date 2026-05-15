@@ -77,7 +77,17 @@ fn read_stable_mac_device_id() -> Option<String> {
         .find_map(normalize_mac_address)
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn read_stable_mac_device_id() -> Option<String> {
+    let output = std::process::Command::new("ifconfig").output().ok()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    stdout
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("ether "))
+        .find_map(normalize_mac_address)
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 fn read_stable_mac_device_id() -> Option<String> {
     let entries = std::fs::read_dir("/sys/class/net").ok()?;
     entries

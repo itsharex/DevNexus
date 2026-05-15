@@ -7,7 +7,13 @@ import { Button, Space, Typography } from "antd";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { isMacOsRuntime } from "@/app/runtime/platform";
+
 export function Titlebar() {
+  if (isMacOsRuntime()) {
+    return null;
+  }
+
   const canControlWindow = isTauri();
   const appWindow = canControlWindow ? getCurrentWindow() : null;
 

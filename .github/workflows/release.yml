@@ -60,7 +60,18 @@ jobs:
           if-no-files-found: error
 
   build-macos:
-    runs-on: macos-latest
+    name: build-macos-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-13
+            target: x86_64-apple-darwin
+          - arch: arm64
+            runner: macos-latest
+            target: aarch64-apple-darwin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,18 +84,28 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build macOS bundle
-        run: npm run tauri build -- --bundles app,dmg
+      - name: Build macOS ${{ matrix.arch }} bundle
+        run: npm run tauri build -- --target ${{ matrix.target }} --bundles app,dmg
+
+      - name: Collect macOS ${{ matrix.arch }} DMG
+        run: |
+          mkdir -p artifacts/macos-${{ matrix.arch }}
+          for file in src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg; do
+            base="$(basename "$file" .dmg)"
+            cp "$file" "artifacts/macos-${{ matrix.arch }}/${base}_${{ matrix.arch }}.dmg"
+          done
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-macos
-          path: src-tauri/target/release/bundle/dmg/*.dmg  # 只上传 dmg，不上传 app
+          name: release-macos-${{ matrix.arch }}
+          path: artifacts/macos-${{ matrix.arch }}/*.dmg
           if-no-files-found: error
 
   build-linux:
@@ -150,9 +171,8 @@ jobs:
           files: |
             dist-release/release-windows/**/*.exe
             dist-release/release-windows/**/*.zip
-            dist-release/release-macos/**/*.dmg
+            dist-release/release-macos-*/*.dmg
             dist-release/release-linux/**/*.deb
             dist-release/release-linux/**/*.AppImage
           fail_on_unmatched_files: true
-
 

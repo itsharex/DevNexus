@@ -1,4 +1,11 @@
 :root {
+  --devnexus-app-bg: #ffffff;
+  --devnexus-header-bg: #fafafa;
+  --devnexus-sidebar-bg: #ffffff;
+  --devnexus-footer-bg: #fafafa;
+  --devnexus-border-color: #e5e6eb;
+  --devnexus-text-strong: #1f2937;
+  --devnexus-surface-soft: #f3f5f8;
   font-family:
     "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
   line-height: 1.4;
@@ -20,11 +27,17 @@ body,
 #root {
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   margin: 0;
+  overflow: hidden;
+  background: var(--devnexus-app-bg);
 }
 
 .devnexus-layout {
-  height: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--devnexus-app-bg);
 }
 
 .devnexus-titlebar {
@@ -52,10 +65,26 @@ body,
 .devnexus-layout__main {
   min-height: 0;
   height: calc(100% - 40px);
+  overflow: hidden;
+  background: var(--devnexus-app-bg);
+}
+
+.devnexus-layout--native-titlebar .devnexus-layout__main {
+  height: 100%;
+}
+
+.devnexus-layout__main > .ant-layout {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--devnexus-app-bg);
 }
 
 .devnexus-sidebar {
   width: 200px;
+  height: 100%;
+  min-height: 0;
+  flex: 0 0 200px;
   transition: width 0.25s ease;
   border-right: 1px solid var(--devnexus-border-color, #e5e6eb);
   display: flex;
@@ -68,6 +97,7 @@ body,
 
 .devnexus-sidebar--collapsed {
   width: 64px;
+  flex-basis: 64px;
 }
 
 .devnexus-sidebar__top,
@@ -104,11 +134,14 @@ body,
   flex-direction: column;
   gap: 8px;
   margin-top: 4px;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .devnexus-sidebar__bottom {
   margin-top: auto;
+  flex: 0 0 auto;
   flex-wrap: wrap;
 }
 
@@ -216,10 +249,11 @@ body,
 }
 
 .devnexus-layout__content {
+  flex: 1;
   padding: 10px 12px 6px;
-  height: calc(100vh - 78px);
   min-height: 0;
   overflow: hidden;
+  background: var(--devnexus-app-bg);
 }
 
 .devnexus-layout__content-card {
@@ -822,6 +856,7 @@ body,
 }
 
 .devnexus-layout__footer {
+  flex: 0 0 38px;
   height: 38px;
   padding: 0 12px;
   border-top: 1px solid var(--devnexus-border-color, #e5e6eb);
@@ -855,10 +890,83 @@ body,
 }
 
 [data-theme="dark"] {
+  --devnexus-app-bg: #141414;
   --devnexus-header-bg: #111a2c;
   --devnexus-sidebar-bg: #141414;
   --devnexus-footer-bg: #111a2c;
   --devnexus-border-color: #303030;
   --devnexus-text-strong: #e5e7eb;
   --devnexus-surface-soft: #1f2937;
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window {
+  border-color: rgba(71, 85, 105, 0.72);
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__body {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__session {
+  border-color: rgba(71, 85, 105, 0.58);
+  background: rgba(30, 41, 59, 0.72);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__session--public {
+  border-color: rgba(96, 165, 250, 0.5);
+  background:
+    linear-gradient(135deg, rgba(30, 64, 175, 0.42), rgba(15, 23, 42, 0.74)),
+    rgba(30, 41, 59, 0.72);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__session--direct {
+  border-color: rgba(74, 222, 128, 0.38);
+  background:
+    linear-gradient(135deg, rgba(22, 101, 52, 0.34), rgba(15, 23, 42, 0.74)),
+    rgba(30, 41, 59, 0.72);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__session--active {
+  border-color: rgba(148, 163, 184, 0.7);
+  background: rgba(51, 65, 85, 0.82);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__session--public.devnexus-lan-chat-window__session--active {
+  border-color: rgba(96, 165, 250, 0.76);
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.52), rgba(30, 41, 59, 0.88)),
+    rgba(30, 41, 59, 0.86);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__session--direct.devnexus-lan-chat-window__session--active {
+  border-color: rgba(74, 222, 128, 0.58);
+  background:
+    linear-gradient(135deg, rgba(22, 163, 74, 0.42), rgba(30, 41, 59, 0.88)),
+    rgba(30, 41, 59, 0.86);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__presence-dot {
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.94);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__composer,
+[data-theme="dark"] .devnexus-lan-chat-window__identity-card,
+[data-theme="dark"] .devnexus-lan-chat-window__message-bubble {
+  background: rgba(30, 41, 59, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(100, 116, 139, 0.24);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__message-row--mine .devnexus-lan-chat-window__message-bubble {
+  background: rgba(37, 99, 235, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.34);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__pane-divider::before {
+  background: rgba(100, 116, 139, 0.44);
+}
+
+[data-theme="dark"] .devnexus-lan-chat-window__pane-divider:hover::before {
+  background: rgba(96, 165, 250, 0.78);
 }

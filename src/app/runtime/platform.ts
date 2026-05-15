@@ -1,0 +1,9 @@
+export function isMacOsRuntime() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const platform = navigator.platform.toLowerCase();
+  const userAgent = navigator.userAgent.toLowerCase();
+  return platform.includes("mac") || userAgent.includes("mac os x");
+}
