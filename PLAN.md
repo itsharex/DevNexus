@@ -1687,6 +1687,16 @@ src-tauri/src/plugins/s3/
 - 18:50 完成 LAN Chat 未读/附件验证与绿色版打包：`npm test`、`npm run build`、`cargo check`、`npm run tauri build -- --no-bundle` 均通过，重新生成 `portable/DevNexus_0.9.1_portable.zip`。
 - 18:58 优化 LAN Chat 附件保存体验：普通文件下载改为先打开系统保存路径选择框，由用户选择目标文件路径后再写入；取消选择时不保存。
 - 19:00 完成 LAN Chat 附件保存修复验证与绿色版重打包：`npm test`、`npm run build`、`cargo check`、`npm run tauri build -- --no-bundle` 均通过；重新生成 `portable/DevNexus_0.9.1_portable.zip`，普通文件下载改为通过系统保存对话框选择路径。
+- 20:45 修复 macOS CI 架构覆盖：`build-desktop.yml` 与 `release.yml` 的 macOS job 改为矩阵构建 Intel `x86_64-apple-darwin` 和 Apple Silicon `aarch64-apple-darwin` 两套 DMG，并在发布资产文件名中追加 `x64` / `arm64`，避免当前 macOS 包只支持 Apple 芯片。
+- 20:52 优化 macOS 窗口体验：macOS 启动时恢复 Tauri 原生窗口装饰，前端在 macOS 下隐藏自绘 Windows 风格标题栏和边缘 resize 热区，使用系统左上角红黄绿窗口控制。
+- 21:27 完成 macOS 打包体验修复验证：补齐本地 Node/Rust/CMake 环境后，`npm test`、`npm run build`、`cargo check` 均通过；保留 Vite 大 chunk 警告，以及既有 SSH `path` 未使用和 `RedisConnectionType` 未使用 warning。
+- 22:10 完成本地 macOS Intel 包输出：显式执行 `tauri build --target x86_64-apple-darwin --bundles app,dmg`，Tauri 自带 DMG 美化脚本在最后一步失败后改用 `hdiutil create` 生成可安装 DMG；产物 `src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/DevNexus_0.9.2_x64.dmg` 已通过 `hdiutil verify`，App 主程序确认为 `Mach-O 64-bit executable x86_64`。
+- 22:24 修复 LAN Chat 暗色主题与昵称弹窗：LAN Chat 浮窗、会话卡片、消息气泡、输入区和分割线补齐 dark 样式；昵称必填弹窗不再因定时刷新 snapshot 重置用户输入。`npm test`、`npm run build` 通过，并重新生成/校验本地 Intel DMG。
+- 22:33 修复主软件窗口底部空白：主 AppShell 外层和内容区 Ant Layout 补齐 100% 高度、隐藏溢出并使用主题背景，底部状态栏固定为 38px flex 区域，避免 macOS/native titlebar 和暗色主题下窗口底部露出大块空白或白边；同时确认 LAN Chat 最大化尺寸不属于本问题并收回相关临时改动。
+- 22:40 完成主窗口底部修复验证与 Intel DMG 重打包：`npm test`、`npm run build`、`cargo check` 通过；重新执行 `tauri build --target x86_64-apple-darwin --bundles app` 并用 `hdiutil create` 生成 `DevNexus_0.9.2_x64.dmg`，`hdiutil verify` 校验通过，主程序确认为 `Mach-O 64-bit executable x86_64`。
+- 22:44 修复左下角 Chat 入口未贴底：Sidebar 自身补齐 `height: 100%`、固定宽度 flex-basis 和 `min-height: 0`，插件列表改为中间可滚动区域，底部 Chat/Theme 工具组固定在侧栏底边；`npm run build` 通过。
+- 22:49 修复 AppShell 未铺满窗口根因：根据截图确认整块 React 根布局只撑到状态栏附近，改为让 `html/body/#root` 和 `.devnexus-layout` 明确占满 `100vh` 并隐藏外层溢出，确保 Sidebar、内容区和底部状态栏一起贴到主窗口底边；`npm run build` 通过。
+- 22:53 完成根布局修复后的 Intel DMG 重打包：重新执行 `tauri build --target x86_64-apple-darwin --bundles app`，用 `hdiutil create` 覆盖生成 `DevNexus_0.9.2_x64.dmg`；`hdiutil verify` 通过，主程序仍确认为 `Mach-O 64-bit executable x86_64`。
 - 21:46 增强 LAN Chat 群聊模型：新增固定公共聊天室 `public-lobby`（不可删除、默认 UDP），房间模型增加按群单独设置的 `channel` 字段；自建/加入/管理群聊可选择 UDP 广播或 TCP 逐个投递，群消息发送按房间通道自动选择传输方式。
 - 21:51 完成 LAN Chat 公共聊天室/群通道验证与绿色版重打包：`npm test`、`npm run build`、`cargo check`、`npm run tauri build -- --no-bundle` 均通过；结束旧绿色版进程占用后重新生成 `portable/DevNexus_0.9.1_portable.zip`。
 - 22:38 简化 LAN Chat 会话模型：只保留固定公共聊天室 `public-lobby` 和私聊；隐藏旧自建群聊，后端拒绝继续创建/加入自定义群聊；左侧会话区合并为单列表，用公共/私聊标签区分。
@@ -1699,3 +1709,8 @@ src-tauri/src/plugins/s3/
 - 23:53 重构 LAN Chat 文件传输：所有文件发送改为发送者本地文件服务承载，消息仅传递 fileId/token/文件元数据；图片、音频、视频在接收端自动通过发送者服务预览，普通文件点击下载时弹保存路径并拉取文件，避免 base64 消息和 UDP 大包限制。
 - 23:58 完成 v0.9.2 文件服务方案验证：`npm test` 通过（10 个测试文件、33 个用例），`npm run build` 通过（保留 Vite 大 chunk 警告），`cargo check` 通过（仅保留既有 `RedisConnectionType` 未使用警告），`npm run tauri build -- --no-bundle` 通过并生成 `src-tauri/target-0.9.2-portable/release/devnexus.exe`。
 - 23:59 调整 v0.9.2 Release 资产：tag 触发的 `release.yml` 在 Windows 构建中额外生成 `DevNexus_<version>_windows_portable.zip` 绿色版，并随 NSIS 安装包一起上传到 GitHub Release。
+
+### 2026-05-16
+
+- 00:02 准备 v0.9.3 发布：同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 至 `0.9.3`，新增 `docs/releases/v0.9.3.md`，将 macOS Intel/Apple Silicon 打包、原生 macOS 标题栏、主窗口/Sidebar 贴底、LAN Chat 主题与昵称修复纳入发布说明。
+- 02:41 完成 v0.9.3 发布前验证：`npm test` 通过（10 个测试文件、33 个用例），`npm run build` 通过（保留 Vite 大 chunk 警告），`cargo check` 通过（保留既有 SSH `path` 未使用与 `RedisConnectionType` 未使用 warning）。

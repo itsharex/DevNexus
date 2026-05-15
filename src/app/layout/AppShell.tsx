@@ -10,6 +10,7 @@ import { buildAppStatusItems, shouldDockChatInStatusBar } from "@/app/layout/sta
 import { Titlebar } from "@/app/layout/Titlebar";
 import { PluginRouter } from "@/app/plugin-registry/PluginRouter";
 import { getById } from "@/app/plugin-registry/registry";
+import { isMacOsRuntime } from "@/app/runtime/platform";
 import { useSettingsStore } from "@/app/store/settings";
 import { getLanChatSnapshot, listLanChatConversations, listLanChatMessages, startLanChatNetwork } from "@/plugins/lan-chat/api";
 import { LanChatWindowHost } from "@/plugins/lan-chat/components/LanChatWindowHost";
@@ -37,7 +38,8 @@ export function AppShell() {
   const seenLanMessageIds = useRef<Set<string>>(new Set());
   const lanMonitorReady = useRef(false);
   const desktopRuntime = isTauri();
-  const appWindow = isTauri() ? getCurrentWindow() : null;
+  const nativeTitlebar = isMacOsRuntime();
+  const appWindow = desktopRuntime && !nativeTitlebar ? getCurrentWindow() : null;
   const edgeSize = 6;
   const selectedToolName = getById(selectedPluginId)?.name ?? selectedPluginId;
   const statusItems = useMemo(
@@ -143,7 +145,7 @@ export function AppShell() {
   ];
 
   return (
-    <Layout className="devnexus-layout">
+    <Layout className={nativeTitlebar ? "devnexus-layout devnexus-layout--native-titlebar" : "devnexus-layout"}>
       {appWindow &&
         edgeOverlays.map((item) => (
           <div
