@@ -1714,3 +1714,7 @@ src-tauri/src/plugins/s3/
 
 - 00:02 准备 v0.9.3 发布：同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 至 `0.9.3`，新增 `docs/releases/v0.9.3.md`，将 macOS Intel/Apple Silicon 打包、原生 macOS 标题栏、主窗口/Sidebar 贴底、LAN Chat 主题与昵称修复纳入发布说明。
 - 02:41 完成 v0.9.3 发布前验证：`npm test` 通过（10 个测试文件、33 个用例），`npm run build` 通过（保留 Vite 大 chunk 警告），`cargo check` 通过（保留既有 SSH `path` 未使用与 `RedisConnectionType` 未使用 warning）。
+
+### 2026-05-18
+
+- 10:52 修复 LAN Chat 三人及以上在线时只在单个节点可见的问题：确认根因是发现链路只依赖单跳 UDP presence，部分网络下只有一个节点掌握完整在线列表；presence、presenceReply 和 room 广播新增已知在线 peer gossip，接收端自动合并远端已知设备，公共聊天室群发目标增加去重，`cargo check` 通过（仅保留既有 `RedisConnectionType` 未使用 warning），`npm test` 通过（10 个测试文件、33 个用例）。
