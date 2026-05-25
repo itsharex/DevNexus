@@ -349,6 +349,16 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
           file_size INTEGER NOT NULL DEFAULT 0,
           created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS confluence_connections (
+          id TEXT PRIMARY KEY NOT NULL,
+          label TEXT NOT NULL,
+          base_url TEXT NOT NULL,
+          username TEXT NOT NULL,
+          password_encrypted TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
         "#,
     )
     .map_err(|err| format!("failed to initialize schema: {err}"))?;
