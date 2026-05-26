@@ -1524,7 +1524,7 @@ src-tauri/src/plugins/s3/
 | 图表渲染 | `mermaid` | Mermaid 图表渲染为 SVG，转 base64 图片上传 |
 | HTML 输出 | `hast-util-to-html` | HAST → HTML 字符串，用于预览 |
 | Confluence API | `reqwest` (Rust) | 通过 REST v1 调用 Confluence Server/Data Center |
-| 认证 | HTTP Basic Auth | Base64 编码用户名+密码/Token |
+| 认证 | Basic Auth + PAT Bearer | 普通账号使用 Basic，SSO/Personal Access Token 使用 `Authorization: Bearer <token>` |
 | 凭据存储 | SQLite + AES-256-GCM | 站点 URL、用户名、密码加密存储，与现有插件保持一致 |
 | 文件关联 | localStorage | 本地 .md 文件路径 → Confluence 页面 ID 映射 |
 
@@ -1570,8 +1570,8 @@ src-tauri/src/plugins/confluence/
   - [x] `cmd_confluence_test_connection(form) -> Result<u64>`：调用 `GET /rest/api/space` 验证，返回耗时毫秒
 
 ### 53.3 Rust 后端 - HTTP 客户端
-- [x] `client.rs`：封装 `reqwest` HTTP 客户端，支持 Basic Auth
-- [x] 从加密存储读取凭据，构建 `Authorization: Basic base64(user:pass)` 请求头
+- [x] `client.rs`：封装 `reqwest` HTTP 客户端，支持 Basic Auth 与 Personal Access Token Bearer
+- [x] 从加密存储读取凭据，按认证方式构建 `Authorization: Basic base64(user:pass)` 或 `Authorization: Bearer <token>` 请求头
 - [x] 统一错误处理：网络错误、401 认证失败、超时、JSON 解析失败
 
 ### 53.4 前端 - 插件注册与连接页
@@ -1704,7 +1704,7 @@ src-tauri/src/plugins/confluence/
 | LaTeX/Mermaid 渲染为图片后体积过大 | 中 | 限制图片尺寸，压缩 base64，超过阈值的图片提示用户手动处理 |
 | Monaco Editor 打包体积大（~5MB） | 低 | Tauri 桌面环境下首次加载后浏览器缓存，不重复下载；后续可考虑 CodeMirror 备选 |
 | Confluence Server 版本差异导致 API 不兼容 | 中 | 测试连接时获取 Confluence 版本，对已知差异做适配；首版目标 Confluence 7.x+ |
-| Basic Auth 安全风险 | 低 | 凭据经 AES-256-GCM 加密存 SQLite，密钥不离开本机，与 SSH/Redis 等插件安全级别一致 |
+| Confluence 凭据安全风险 | 低 | Basic 密码/API Token 与 PAT 均经 AES-256-GCM 加密存 SQLite，密钥不离开本机，与 SSH/Redis 等插件安全级别一致 |
 | 大文档转换性能 | 低 | 前端 Web Worker 异步转换，不阻塞 UI；超过 50KB 的文档显示转换进度 |
 
 ---
@@ -1938,3 +1938,7 @@ src-tauri/src/plugins/confluence/
 - 修复 `src-tauri/src/lib.rs` 多余闭合括号（compilation error: unexpected closing delimiter）。
 - 修复 `commands.rs` unused variable warning（`_app_handle`）。
 - 验证通过：`cargo check`（2 个预期 warning）、`npm test`（10 个文件、33 个用例全部通过）、`npm run build`（Vite 大 chunk 警告正常）。
+
+### 2026-05-26
+
+- 修复 Confluence Publisher 在 SSO/PAT 场景测试连接 401 的问题：连接配置新增认证方式 `Basic` / `Personal Access Token (Bearer)`，后端按 `auth_type` 生成 `Authorization: Basic ...` 或 `Authorization: Bearer <token>`；旧连接默认 Basic，SQLite 增加 `auth_type` 迁移，编辑连接时密码/Token 留空会保留原加密凭据；README、release notes 和第十期计划同步说明 SSO/PAT Bearer 支持；`cargo check`、`npm test`、`npm run build` 均通过。

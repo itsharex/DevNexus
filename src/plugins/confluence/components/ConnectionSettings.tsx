@@ -1,4 +1,4 @@
-import { Button, Drawer, Form, Input, List, message, Popconfirm, Space, Typography } from "antd";
+import { Button, Drawer, Form, Input, List, message, Popconfirm, Select, Space, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
@@ -16,6 +16,7 @@ export function ConnectionSettings({ open, onClose }: { open: boolean; onClose: 
   const setActiveConnectionId = useConfluenceStore((s) => s.setActiveConnectionId);
   const [testing, setTesting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const authType = Form.useWatch("authType", form) ?? "basic";
 
   useEffect(() => {
     if (open) void fetchConnections();
@@ -39,7 +40,7 @@ export function ConnectionSettings({ open, onClose }: { open: boolean; onClose: 
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      const finalForm = { ...values, id: editingId || undefined };
+      const finalForm = { ...values, authType: values.authType ?? "basic", id: editingId || undefined };
       const id = await saveConnection(finalForm);
       setActiveConnectionId(id);
       message.success("Connection saved");
@@ -52,7 +53,7 @@ export function ConnectionSettings({ open, onClose }: { open: boolean; onClose: 
     const conn = connections.find((c) => c.id === id);
     if (conn) {
       setEditingId(id);
-      form.setFieldsValue({ label: conn.label, baseUrl: conn.baseUrl, username: conn.username, password: "" });
+      form.setFieldsValue({ label: conn.label, baseUrl: conn.baseUrl, username: conn.username, authType: conn.authType ?? "basic", password: "" });
     }
   };
 
@@ -64,18 +65,31 @@ export function ConnectionSettings({ open, onClose }: { open: boolean; onClose: 
 
   return (
     <Drawer title="Confluence Connections" open={open} onClose={onClose} width={420}>
-      <Form form={form} layout="vertical" size="small">
+      <Form form={form} layout="vertical" size="small" initialValues={{ authType: "basic" }}>
         <Form.Item name="label" label="Label" rules={[{ required: true, message: "Required" }]}>
           <Input placeholder="My Confluence" />
         </Form.Item>
         <Form.Item name="baseUrl" label="Site URL" rules={[{ required: true, message: "Required" }]}>
           <Input placeholder="https://confluence.example.com" />
         </Form.Item>
-        <Form.Item name="username" label="Username" rules={[{ required: true, message: "Required" }]}>
-          <Input placeholder="admin" />
+        <Form.Item name="authType" label="Auth Type" rules={[{ required: true, message: "Required" }]}>
+          <Select
+            options={[
+              { label: "Username + Password / API Token (Basic)", value: "basic" },
+              { label: "Personal Access Token (Bearer, SSO)", value: "pat" },
+            ]}
+          />
         </Form.Item>
-        <Form.Item name="password" label="Password / Token" rules={[{ required: !editingId, message: "Required" }]}>
-          <Input.Password placeholder="password or personal access token" />
+        <Form.Item name="username" label={authType === "pat" ? "Username (optional)" : "Username"} rules={[{ required: authType !== "pat", message: "Required" }]}>
+          <Input placeholder={authType === "pat" ? "optional for PAT/Bearer" : "admin"} />
+        </Form.Item>
+        <Form.Item
+          name="password"
+          label={authType === "pat" ? "Personal Access Token" : "Password / API Token"}
+          rules={[{ required: !editingId, message: "Required" }]}
+          extra={authType === "pat" ? "For SSO-enabled Confluence Server/Data Center, use a PAT. It is sent as Authorization: Bearer <token>." : "Basic Auth sends username and password/token as Authorization: Basic base64(username:password)."}
+        >
+          <Input.Password placeholder={authType === "pat" ? "paste personal access token" : "password or API token"} />
         </Form.Item>
         <Space>
           <Button onClick={handleTest} loading={testing}>Test</Button>
@@ -101,7 +115,7 @@ export function ConnectionSettings({ open, onClose }: { open: boolean; onClose: 
               </Popconfirm>,
             ]}
           >
-            <List.Item.Meta title={conn.label} description={`${conn.baseUrl} (${conn.username})`} />
+            <List.Item.Meta title={conn.label} description={`${conn.baseUrl} (${conn.authType === "pat" ? "PAT / Bearer" : conn.username})`} />
           </List.Item>
         )}
       />

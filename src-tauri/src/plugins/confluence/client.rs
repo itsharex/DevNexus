@@ -12,11 +12,17 @@ pub struct ConfluenceClient {
 }
 
 impl ConfluenceClient {
-    pub fn new(base_url: &str, username: &str, password: &str) -> Self {
+    pub fn new(base_url: &str, username: &str, password: &str, auth_type: &str) -> Self {
         let base_url = base_url.trim_end_matches('/').to_string();
-        let credentials = format!("{username}:{password}");
-        let encoded = base64::engine::general_purpose::STANDARD.encode(credentials.as_bytes());
-        let auth_header = format!("Basic {encoded}");
+        let auth_header = match auth_type {
+            "pat" | "bearer" => format!("Bearer {}", password.trim()),
+            _ => {
+                let credentials = format!("{username}:{password}");
+                let encoded =
+                    base64::engine::general_purpose::STANDARD.encode(credentials.as_bytes());
+                format!("Basic {encoded}")
+            }
+        };
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .danger_accept_invalid_certs(true)
@@ -40,10 +46,14 @@ impl ConfluenceClient {
             .await
             .map_err(|e| format!("Connection failed: {e}"))?;
         if resp.status().as_u16() == 401 {
-            return Err("Authentication failed (401). Check username and password.".into());
+            return Err("Authentication failed (401). Check auth type and credential. For SSO/PAT, use Personal Access Token (Bearer).".into());
         }
         if !resp.status().is_success() {
-            return Err(format!("HTTP {}: {}", resp.status(), resp.status().canonical_reason().unwrap_or("unknown")));
+            return Err(format!(
+                "HTTP {}: {}",
+                resp.status(),
+                resp.status().canonical_reason().unwrap_or("unknown")
+            ));
         }
         Ok(())
     }
@@ -61,7 +71,10 @@ impl ConfluenceClient {
         if !resp.status().is_success() {
             return Err(format!("List spaces HTTP {}", resp.status()));
         }
-        let body: Value = resp.json().await.map_err(|e| format!("JSON parse failed: {e}"))?;
+        let body: Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {e}"))?;
         let spaces: Vec<SpaceInfo> = body["results"]
             .as_array()
             .map(|arr| {
@@ -78,9 +91,16 @@ impl ConfluenceClient {
         Ok(spaces)
     }
 
-    pub async fn list_pages(&self, space_key: &str, parent_id: Option<&str>) -> Result<Vec<PageInfo>, String> {
+    pub async fn list_pages(
+        &self,
+        space_key: &str,
+        parent_id: Option<&str>,
+    ) -> Result<Vec<PageInfo>, String> {
         let url = if let Some(pid) = parent_id {
-            format!("{}/rest/api/content/{}/child/page?limit=200", self.base_url, pid)
+            format!(
+                "{}/rest/api/content/{}/child/page?limit=200",
+                self.base_url, pid
+            )
         } else {
             format!(
                 "{}/rest/api/content?type=page&spaceKey={}&limit=200",
@@ -98,7 +118,10 @@ impl ConfluenceClient {
         if !resp.status().is_success() {
             return Err(format!("List pages HTTP {}", resp.status()));
         }
-        let body: Value = resp.json().await.map_err(|e| format!("JSON parse failed: {e}"))?;
+        let body: Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {e}"))?;
         let pages: Vec<PageInfo> = body["results"]
             .as_array()
             .map(|arr| {
@@ -154,7 +177,10 @@ impl ConfluenceClient {
             let text = resp.text().await.unwrap_or_default();
             return Err(format!("Create page HTTP {}: {}", status, text));
         }
-        let result: Value = resp.json().await.map_err(|e| format!("JSON parse failed: {e}"))?;
+        let result: Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {e}"))?;
         Ok(PageInfo {
             id: result["id"].as_str().unwrap_or_default().to_string(),
             title: result["title"].as_str().unwrap_or_default().to_string(),
@@ -197,12 +223,18 @@ impl ConfluenceClient {
             let text = resp.text().await.unwrap_or_default();
             return Err(format!("Update page HTTP {}: {}", status, text));
         }
-        let result: Value = resp.json().await.map_err(|e| format!("JSON parse failed: {e}"))?;
+        let result: Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {e}"))?;
         Ok(PageInfo {
             id: result["id"].as_str().unwrap_or_default().to_string(),
             title: result["title"].as_str().unwrap_or_default().to_string(),
             version: result["version"]["number"].as_u64().unwrap_or(1) as u32,
-            space_key: result["space"]["key"].as_str().unwrap_or_default().to_string(),
+            space_key: result["space"]["key"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
         })
     }
 
@@ -236,13 +268,19 @@ impl ConfluenceClient {
             let text = resp.text().await.unwrap_or_default();
             return Err(format!("Upload attachment HTTP {}: {}", status, text));
         }
-        let result: Value = resp.json().await.map_err(|e| format!("JSON parse failed: {e}"))?;
+        let result: Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {e}"))?;
         let results = result["results"].as_array();
         let att = results.and_then(|a| a.first()).unwrap_or(&result);
         Ok(AttachmentInfo {
             id: att["id"].as_str().unwrap_or_default().to_string(),
             title: att["title"].as_str().unwrap_or_default().to_string(),
-            download_url: att["_links"]["download"].as_str().unwrap_or_default().to_string(),
+            download_url: att["_links"]["download"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
         })
     }
 }

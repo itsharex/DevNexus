@@ -3,6 +3,7 @@ export interface ConfluenceConnectionInfo {
   label: string;
   baseUrl: string;
   username: string;
+  authType: "basic" | "pat";
   createdAt: string;
   updatedAt: string;
 }
@@ -12,6 +13,7 @@ export interface ConfluenceConnectionForm {
   label: string;
   baseUrl: string;
   username: string;
+  authType?: "basic" | "pat";
   password: string;
 }
 

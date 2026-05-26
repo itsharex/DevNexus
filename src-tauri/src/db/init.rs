@@ -355,6 +355,7 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
           label TEXT NOT NULL,
           base_url TEXT NOT NULL,
           username TEXT NOT NULL,
+          auth_type TEXT NOT NULL DEFAULT 'basic',
           password_encrypted TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
@@ -365,6 +366,10 @@ pub fn run(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
 
     let _ = conn.execute(
         "ALTER TABLE lan_chat_rooms ADD COLUMN channel TEXT NOT NULL DEFAULT 'udp'",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE confluence_connections ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'basic'",
         [],
     );
 

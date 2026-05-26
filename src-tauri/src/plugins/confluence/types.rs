@@ -5,6 +5,7 @@ pub struct ConfluenceConnectionInfo {
     pub label: String,
     pub base_url: String,
     pub username: String,
+    pub auth_type: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -16,6 +17,7 @@ pub struct ConfluenceConnectionForm {
     pub label: String,
     pub base_url: String,
     pub username: String,
+    pub auth_type: Option<String>,
     pub password: String,
 }
 
