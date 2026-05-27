@@ -7,6 +7,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import type { Root, Content, PhrasingContent, Table, TableRow, TableCell } from "mdast";
+import { drawioAttachmentFileName, drawioMacro } from "@/plugins/confluence/utils/drawio";
 
 function escapeXml(text: string): string {
   return text
@@ -16,8 +17,42 @@ function escapeXml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function escapeHtmlInCdata(text: string): string {
-  return text.replace(/]]>/g, "]]]]><![CDATA[>");
+export function confluenceCodeLanguage(lang: string): string {
+  const normalized = lang.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    json: "javascript",
+    jsonc: "javascript",
+    js: "javascript",
+    ts: "typescript",
+    sh: "bash",
+    shell: "bash",
+    yml: "yaml",
+    md: "markdown",
+  };
+  const mapped = aliases[normalized] ?? normalized;
+  const supported = new Set([
+    "actionscript",
+    "bash",
+    "c",
+    "cpp",
+    "csharp",
+    "css",
+    "html",
+    "java",
+    "javascript",
+    "lua",
+    "markdown",
+    "perl",
+    "php",
+    "powershell",
+    "python",
+    "ruby",
+    "sql",
+    "typescript",
+    "xml",
+    "yaml",
+  ]);
+  return supported.has(mapped) ? mapped : "";
 }
 
 function phrasingToXml(nodes: PhrasingContent[]): string {
@@ -73,9 +108,13 @@ function nodeToXml(node: Content | Root): string {
         return `<ac:structured-macro ac:name="mathblock"><ac:plain-text-body><![CDATA[${node.value}]]></ac:plain-text-body></ac:structured-macro>`;
       }
       if (lang === "mermaid") {
-        return `<ac:structured-macro ac:name="html"><ac:plain-text-body><![CDATA[<div class="mermaid">${escapeHtmlInCdata(node.value)}</div><script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad:true});</script>]]></ac:plain-text-body></ac:structured-macro>`;
+        return drawioMacro(drawioAttachmentFileName(node.value));
       }
-      return `<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">${escapeXml(lang)}</ac:parameter><ac:plain-text-body><![CDATA[${node.value}]]></ac:plain-text-body></ac:structured-macro>`;
+      const confluenceLang = confluenceCodeLanguage(lang);
+      const languageParam = confluenceLang
+        ? `<ac:parameter ac:name="language">${escapeXml(confluenceLang)}</ac:parameter>`
+        : "";
+      return `<ac:structured-macro ac:name="code">${languageParam}<ac:plain-text-body><![CDATA[${node.value}]]></ac:plain-text-body></ac:structured-macro>`;
     }
 
     case "link":
@@ -151,6 +190,7 @@ export function markdownToConfluence(markdown: string): string {
 
 export function markdownToPreviewHtml(markdown: string): string {
   const xml = markdownToConfluence(markdown);
+  let mermaidIndex = 0;
   return xml
     .replace(/<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">([^<]*)<\/ac:parameter><ac:plain-text-body><!\[CDATA\[([\s\S]*?)\]\]><\/ac:plain-text-body><\/ac:structured-macro>/g,
       '<pre><code class="language-$1">$2</code></pre>')
@@ -158,8 +198,11 @@ export function markdownToPreviewHtml(markdown: string): string {
       '<div class="math-block" style="background:#f5f5f5;padding:12px;border-radius:4px;font-family:serif;font-style:italic">$$$$1$$</div>')
     .replace(/<ac:structured-macro ac:name="mathinline"><ac:parameter ac:name="body">([^<]*)<\/ac:parameter><\/ac:structured-macro>/g,
       '<span class="math-inline" style="font-family:serif;font-style:italic">$$$1$</span>')
-    .replace(/<ac:structured-macro ac:name="html"><ac:plain-text-body><!\[CDATA\[<div class="mermaid">([\s\S]*?)<\/div>[\s\S]*?\]\]><\/ac:plain-text-body><\/ac:structured-macro>/g,
-      '<pre style="background:#f0f8ff;padding:12px;border:1px solid #b0d4f1;border-radius:4px"><code class="language-mermaid">$1</code></pre>')
+    .replace(/<ac:structured-macro ac:name="drawio">[\s\S]*?<ac:parameter ac:name="diagramName">mermaid-[^<]+\.drawio<\/ac:parameter>[\s\S]*?<\/ac:structured-macro>/g, () => {
+      const diagrams = extractMermaidSources(markdown);
+      const source = diagrams[mermaidIndex++] ?? "";
+      return `<div class="confluence-mermaid-preview" data-mermaid="${encodeURIComponent(source)}"><pre style="white-space:pre-wrap">${escapeXml(source)}</pre></div>`;
+    })
     .replace(/<ac:image><ri:url ri:value="([^"]*)" \/><\/ac:image>/g,
       '<img src="$1" style="max-width:100%" />')
     .replace(/<ac:image><ri:attachment ri:filename="([^"]*)" \/><\/ac:image>/g,
@@ -168,4 +211,15 @@ export function markdownToPreviewHtml(markdown: string): string {
       '<li style="list-style:none"><input type="checkbox" checked disabled /> $1</li>')
     .replace(/<ac:task><ac:task-status>incomplete<\/ac:task-status><ac:task-body>([\s\S]*?)<\/ac:task-body><\/ac:task>/g,
       '<li style="list-style:none"><input type="checkbox" disabled /> $1</li>');
+}
+
+export function extractMermaidSources(markdown: string): string[] {
+  const sources: string[] = [];
+  const mermaidRegex = /```mermaid\s*\n([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+  while ((match = mermaidRegex.exec(markdown)) !== null) {
+    const source = match[1].trim();
+    if (source) sources.push(source);
+  }
+  return sources;
 }

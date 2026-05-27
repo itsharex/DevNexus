@@ -49,3 +49,37 @@ export interface FilePageMapping {
   version: number;
   lastPublished: string;
 }
+
+export interface ConfluencePublishHistory {
+  id: string;
+  connectionId: string;
+  spaceKey: string;
+  pageId: string;
+  pageTitle: string;
+  pageVersion: number;
+  parentId?: string | null;
+  parentTitle?: string | null;
+  action: "create" | "update";
+  filePath?: string | null;
+  markdownContent: string;
+  publishedAt: string;
+}
+
+export interface ConfluencePublishHistoryForm {
+  connectionId: string;
+  spaceKey: string;
+  pageId: string;
+  pageTitle: string;
+  pageVersion: number;
+  parentId?: string | null;
+  parentTitle?: string | null;
+  action: "create" | "update";
+  filePath?: string | null;
+  markdownContent: string;
+}
+
+export interface ConfluencePageTarget {
+  spaceKey: string;
+  pageId?: string;
+  pageTitle?: string;
+}

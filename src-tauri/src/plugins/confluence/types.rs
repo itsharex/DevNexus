@@ -52,3 +52,35 @@ pub struct ConfluenceTestResult {
     pub duration_ms: u64,
     pub error: Option<String>,
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfluencePublishHistory {
+    pub id: String,
+    pub connection_id: String,
+    pub space_key: String,
+    pub page_id: String,
+    pub page_title: String,
+    pub page_version: u32,
+    pub parent_id: Option<String>,
+    pub parent_title: Option<String>,
+    pub action: String,
+    pub file_path: Option<String>,
+    pub markdown_content: String,
+    pub published_at: String,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfluencePublishHistoryForm {
+    pub connection_id: String,
+    pub space_key: String,
+    pub page_id: String,
+    pub page_title: String,
+    pub page_version: u32,
+    pub parent_id: Option<String>,
+    pub parent_title: Option<String>,
+    pub action: String,
+    pub file_path: Option<String>,
+    pub markdown_content: String,
+}

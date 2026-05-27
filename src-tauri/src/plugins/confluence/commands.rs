@@ -200,3 +200,107 @@ pub async fn cmd_confluence_upload_attachment(
         .upload_attachment(&page_id, &file_name, file_bytes, &content_type)
         .await
 }
+
+#[tauri::command]
+pub async fn cmd_confluence_record_publish_history(
+    app_handle: tauri::AppHandle,
+    form: ConfluencePublishHistoryForm,
+) -> Result<String, String> {
+    let conn = open_db(&app_handle)?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        r#"INSERT INTO confluence_publish_history
+           (id, connection_id, space_key, page_id, page_title, page_version, parent_id, parent_title, action, file_path, markdown_content, published_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"#,
+        params![
+            id,
+            form.connection_id,
+            form.space_key,
+            form.page_id,
+            form.page_title,
+            form.page_version,
+            form.parent_id,
+            form.parent_title,
+            form.action,
+            form.file_path,
+            form.markdown_content,
+            now
+        ],
+    )
+    .map_err(|e| format!("record publish history failed: {e}"))?;
+    Ok(id)
+}
+
+#[tauri::command]
+pub async fn cmd_confluence_list_publish_history(
+    app_handle: tauri::AppHandle,
+    conn_id: Option<String>,
+) -> Result<Vec<ConfluencePublishHistory>, String> {
+    let conn = open_db(&app_handle)?;
+    let mut results = Vec::new();
+    if let Some(conn_id) = conn_id {
+        let mut stmt = conn
+            .prepare(
+                r#"SELECT id, connection_id, space_key, page_id, page_title, page_version, parent_id, parent_title, action, file_path, markdown_content, published_at
+                   FROM confluence_publish_history
+                   WHERE connection_id = ?1
+                   ORDER BY published_at DESC
+                   LIMIT 200"#,
+            )
+            .map_err(|e| format!("prepare failed: {e}"))?;
+        let rows = stmt
+            .query_map(params![conn_id], map_publish_history_row)
+            .map_err(|e| format!("query failed: {e}"))?;
+        for row in rows {
+            results.push(row.map_err(|e| format!("row read failed: {e}"))?);
+        }
+    } else {
+        let mut stmt = conn
+            .prepare(
+                r#"SELECT id, connection_id, space_key, page_id, page_title, page_version, parent_id, parent_title, action, file_path, markdown_content, published_at
+                   FROM confluence_publish_history
+                   ORDER BY published_at DESC
+                   LIMIT 200"#,
+            )
+            .map_err(|e| format!("prepare failed: {e}"))?;
+        let rows = stmt
+            .query_map([], map_publish_history_row)
+            .map_err(|e| format!("query failed: {e}"))?;
+        for row in rows {
+            results.push(row.map_err(|e| format!("row read failed: {e}"))?);
+        }
+    }
+    Ok(results)
+}
+
+fn map_publish_history_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ConfluencePublishHistory> {
+    Ok(ConfluencePublishHistory {
+        id: row.get(0)?,
+        connection_id: row.get(1)?,
+        space_key: row.get(2)?,
+        page_id: row.get(3)?,
+        page_title: row.get(4)?,
+        page_version: row.get(5)?,
+        parent_id: row.get(6)?,
+        parent_title: row.get(7)?,
+        action: row.get(8)?,
+        file_path: row.get(9)?,
+        markdown_content: row.get(10)?,
+        published_at: row.get(11)?,
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_confluence_delete_publish_history(
+    app_handle: tauri::AppHandle,
+    id: String,
+) -> Result<(), String> {
+    let conn = open_db(&app_handle)?;
+    conn.execute(
+        "DELETE FROM confluence_publish_history WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("delete publish history failed: {e}"))?;
+    Ok(())
+}

@@ -252,7 +252,10 @@ pub fn run() {
             plugins::confluence::commands::cmd_confluence_list_pages,
             plugins::confluence::commands::cmd_confluence_create_page,
             plugins::confluence::commands::cmd_confluence_update_page,
-            plugins::confluence::commands::cmd_confluence_upload_attachment
+            plugins::confluence::commands::cmd_confluence_upload_attachment,
+            plugins::confluence::commands::cmd_confluence_record_publish_history,
+            plugins::confluence::commands::cmd_confluence_list_publish_history,
+            plugins::confluence::commands::cmd_confluence_delete_publish_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

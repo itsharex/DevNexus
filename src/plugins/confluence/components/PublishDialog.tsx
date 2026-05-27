@@ -3,19 +3,23 @@ import { useEffect, useState } from "react";
 
 import { useConfluenceStore } from "@/plugins/confluence/store/confluence";
 import { markdownToConfluence } from "@/plugins/confluence/utils/converter";
-import { extractLocalImages, uploadLocalImages, replaceLocalImagesInXml } from "@/plugins/confluence/utils/attachments";
+import { extractLocalImages, extractMermaidDiagrams, uploadLocalImages, uploadMermaidDiagrams, replaceLocalImagesInXml } from "@/plugins/confluence/utils/attachments";
 import type { PageInfo, SpaceInfo } from "@/plugins/confluence/types";
 
 export function PublishDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const activeConnectionId = useConfluenceStore((s) => s.activeConnectionId);
   const markdownContent = useConfluenceStore((s) => s.markdownContent);
   const currentFilePath = useConfluenceStore((s) => s.currentFilePath);
+  const currentPageMapping = useConfluenceStore((s) => s.currentPageMapping);
   const fileMappings = useConfluenceStore((s) => s.fileMappings);
+  const selectedTarget = useConfluenceStore((s) => s.selectedTarget);
   const listSpaces = useConfluenceStore((s) => s.listSpaces);
   const listPages = useConfluenceStore((s) => s.listPages);
   const createPage = useConfluenceStore((s) => s.createPage);
   const updatePage = useConfluenceStore((s) => s.updatePage);
   const saveFileMapping = useConfluenceStore((s) => s.saveFileMapping);
+  const setCurrentPageMapping = useConfluenceStore((s) => s.setCurrentPageMapping);
+  const recordPublishHistory = useConfluenceStore((s) => s.recordPublishHistory);
 
   const [spaces, setSpaces] = useState<SpaceInfo[]>([]);
   const [pages, setPages] = useState<PageInfo[]>([]);
@@ -26,9 +30,9 @@ export function PublishDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [statusText, setStatusText] = useState("");
 
   // Detect existing mapping
-  const existingMapping = currentFilePath
+  const existingMapping = (currentFilePath
     ? fileMappings.find((m) => m.filePath === currentFilePath)
-    : null;
+    : null) ?? currentPageMapping;
 
   useEffect(() => {
     if (open && activeConnectionId) {
@@ -44,9 +48,12 @@ export function PublishDialog({ open, onClose }: { open: boolean; onClose: () =>
       if (existingMapping) {
         setSelectedSpace(existingMapping.spaceKey);
         setTitle(existingMapping.pageTitle);
+      } else if (selectedTarget) {
+        setSelectedSpace(selectedTarget.spaceKey);
+        setSelectedParent(selectedTarget.pageId);
       }
     }
-  }, [open, activeConnectionId, markdownContent, currentFilePath, existingMapping, listSpaces]);
+  }, [open, activeConnectionId, markdownContent, currentFilePath, existingMapping, listSpaces, selectedTarget]);
 
   useEffect(() => {
     if (selectedSpace && activeConnectionId) {
@@ -91,6 +98,11 @@ export function PublishDialog({ open, onClose }: { open: boolean; onClose: () =>
             page = await updatePage(activeConnectionId, page.id, title, contentXml, page.version);
           }
         }
+        const mermaidDiagrams = extractMermaidDiagrams(markdownContent);
+        if (mermaidDiagrams.length > 0) {
+          setStatusText(`Rendering ${mermaidDiagrams.length} Mermaid diagram(s)...`);
+          await uploadMermaidDiagrams(activeConnectionId, page.id, mermaidDiagrams);
+        }
         message.success(`Page updated (v${page.version})`);
       } else {
         // Create new page
@@ -115,20 +127,40 @@ export function PublishDialog({ open, onClose }: { open: boolean; onClose: () =>
             page = await updatePage(activeConnectionId, page.id, title, contentXml, page.version);
           }
         }
+        const mermaidDiagrams = extractMermaidDiagrams(markdownContent);
+        if (mermaidDiagrams.length > 0) {
+          setStatusText(`Rendering ${mermaidDiagrams.length} Mermaid diagram(s)...`);
+          await uploadMermaidDiagrams(activeConnectionId, page.id, mermaidDiagrams);
+        }
         message.success("Page created successfully");
       }
 
       // Save mapping
+      const mapping = {
+        filePath: currentFilePath ?? `confluence-page:${page.id}`,
+        spaceKey: page.spaceKey || selectedSpace,
+        pageId: page.id,
+        pageTitle: page.title,
+        version: page.version,
+        lastPublished: new Date().toISOString(),
+      };
       if (currentFilePath) {
-        saveFileMapping({
-          filePath: currentFilePath,
-          spaceKey: page.spaceKey || selectedSpace,
-          pageId: page.id,
-          pageTitle: page.title,
-          version: page.version,
-          lastPublished: new Date().toISOString(),
-        });
+        saveFileMapping(mapping);
+      } else {
+        setCurrentPageMapping(mapping);
       }
+      await recordPublishHistory({
+        connectionId: activeConnectionId,
+        spaceKey: page.spaceKey || selectedSpace,
+        pageId: page.id,
+        pageTitle: page.title,
+        pageVersion: page.version,
+        parentId: existingMapping ? null : selectedParent ?? null,
+        parentTitle: existingMapping ? null : selectedTarget?.pageTitle ?? null,
+        action: existingMapping ? "update" : "create",
+        filePath: currentFilePath,
+        markdownContent,
+      });
       onClose();
     } catch (err) {
       message.error(String(err));
@@ -180,6 +212,11 @@ export function PublishDialog({ open, onClose }: { open: boolean; onClose: () =>
             </div>
             <div>
               <Typography.Text strong>Parent Page (optional)</Typography.Text>
+              {selectedTarget?.pageId && selectedTarget.pageId === selectedParent && (
+                <Typography.Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                  Defaulted from left page tree: {selectedTarget.pageTitle}
+                </Typography.Text>
+              )}
               <Select
                 style={{ width: "100%" }}
                 value={selectedParent}

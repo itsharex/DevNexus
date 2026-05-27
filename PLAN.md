@@ -1942,3 +1942,14 @@ src-tauri/src/plugins/confluence/
 ### 2026-05-26
 
 - 修复 Confluence Publisher 在 SSO/PAT 场景测试连接 401 的问题：连接配置新增认证方式 `Basic` / `Personal Access Token (Bearer)`，后端按 `auth_type` 生成 `Authorization: Basic ...` 或 `Authorization: Bearer <token>`；旧连接默认 Basic，SQLite 增加 `auth_type` 迁移，编辑连接时密码/Token 留空会保留原加密凭据；README、release notes 和第十期计划同步说明 SSO/PAT Bearer 支持；`cargo check`、`npm test`、`npm run build` 均通过。
+- 修复 Confluence Publisher 父页面列表混入下级页面的问题：根层 Parent Page 查询改为 `expand=ancestors,version` 并只保留 `ancestors` 为空的页面；选择父页面后的子页面加载仍使用 `/rest/api/content/{parentId}/child/page` 获取直接子页面；`cargo check` 通过。
+- 11:42 优化 Confluence Publisher 页面选择与历史发布：编辑器左侧新增 Space/Page Tree，支持按 Space 加载一级页面、展开页面懒加载子页面，选中页面后发布弹窗默认发布到该页面下；新增 `confluence_publish_history` SQLite 表与记录/列表/删除命令，发布创建/更新后保存 Markdown 快照，可从历史记录一键载入继续修改或删除本地历史记录；根层页面查询调整为官方 `/rest/api/space/{spaceKey}/content/page` 并继续用 `ancestors` 过滤一级页面。
+- 11:51 清理 Rust warning：删除后端未使用的 `RedisConnectionType` enum，Redis 连接类型继续按现有数据库/表单字符串透传；`cargo check` 已无 `RedisConnectionType` 未使用 warning，`npm test`、`npm run build`、`cargo check` 均通过。
+- 12:48 修复 Confluence Space 页面树在 LAI 等空间下拉不到目录的问题：根页面查询兼容 Confluence Server/Data Center 的顶层 `results` 与 `page.results` 两种响应结构；官方 `/rest/api/space/{spaceKey}/content/page` 失败或返回空时自动回退到 `/rest/api/content?type=page&spaceKey=...&expand=ancestors,version` 并过滤一级页面；补充后端单元测试覆盖两种响应结构，`cargo check`、`cargo test confluence::client::tests --lib`、`npm test`、`npm run build` 均通过。
+- 13:56 修复 Confluence Publisher 编辑状态与 Mermaid/代码宏兼容性：顶部工具栏新增 `New`，左侧页面树新增 `New here`，新建草稿时清空当前编辑内容、文件路径和旧页面绑定，但保留左侧选中的 Space/Page 作为发布目标，避免在其他目录新写文档时误更新老页面；代码宏增加语言白名单与别名映射，`json/jsonc` 映射为 `javascript`，`http` 等不支持语言自动省略 language 参数；Mermaid 本地预览改为实时渲染，发布时渲染为 PNG 附件后嵌入页面，避免 Confluence Server/Data Center 不显示 SVG 或禁用 html 宏的问题。
+
+### 2026-05-27
+
+- 08:46 调整 Mermaid 发布策略为 draw.io 嵌入：Markdown 中的 `mermaid` 代码块不再输出 html 宏、PNG 或普通图片附件；发布时先用 Mermaid 渲染 SVG，再封装为 `.drawio` XML 附件上传，页面正文插入 Confluence draw.io 宏引用该附件，解决位图失真问题并适配已安装 draw.io 插件的 Confluence 环境；本地预览仍使用 Mermaid 实时渲染。
+- 18:51 修复阿里云 OSS/S3 兼容账号无 `ListBuckets` 权限时无法进入 Bucket 列表的问题：S3 连接高级配置将 `Default Bucket` 扩展为 `Manual Buckets`，支持逗号、分号或换行填写多个 Bucket；连接测试在配置手动 Bucket 时改用第一个 Bucket 的 `ListObjectsV2(maxKeys=1)` 验证权限；Bucket 列表在 `ListBuckets` 失败或返回空时回退到手动 Bucket 列表，保障仅授权具体 Bucket 的账号仍可浏览对象。
+- 20:13 优化 OSS/S3 Objects 页面占满主工作区：S3 插件内容区、Objects 卡片和对象列表改为连续 flex 布局；对象表格去掉固定 `520px` 滚动高度，改用 `ResizeObserver` 根据可用空间动态计算滚动区域，Grid/List 两种视图都随窗口尺寸铺满剩余区域。

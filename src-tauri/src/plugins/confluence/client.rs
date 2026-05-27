@@ -96,20 +96,41 @@ impl ConfluenceClient {
         space_key: &str,
         parent_id: Option<&str>,
     ) -> Result<Vec<PageInfo>, String> {
-        let url = if let Some(pid) = parent_id {
-            format!(
+        if let Some(pid) = parent_id {
+            let url = format!(
                 "{}/rest/api/content/{}/child/page?limit=200",
-                self.base_url, pid
-            )
-        } else {
-            format!(
-                "{}/rest/api/content?type=page&spaceKey={}&limit=200",
-                self.base_url, space_key
-            )
-        };
+                self.base_url,
+                urlencoding::encode(pid)
+            );
+            return self.fetch_pages(&url, space_key, false).await;
+        }
+
+        let encoded_space = urlencoding::encode(space_key);
+        let primary_url = format!(
+            "{}/rest/api/space/{}/content/page?limit=200&expand=ancestors,version",
+            self.base_url, encoded_space
+        );
+        let fallback_url = format!(
+            "{}/rest/api/content?type=page&spaceKey={}&expand=ancestors,version&limit=200",
+            self.base_url, encoded_space
+        );
+
+        match self.fetch_pages(&primary_url, space_key, true).await {
+            Ok(pages) if !pages.is_empty() => Ok(pages),
+            Ok(_) => self.fetch_pages(&fallback_url, space_key, true).await,
+            Err(_) => self.fetch_pages(&fallback_url, space_key, true).await,
+        }
+    }
+
+    async fn fetch_pages(
+        &self,
+        url: &str,
+        space_key: &str,
+        root_only: bool,
+    ) -> Result<Vec<PageInfo>, String> {
         let resp = self
             .http
-            .get(&url)
+            .get(url)
             .header(AUTHORIZATION, &self.auth_header)
             .header(ACCEPT, "application/json")
             .send()
@@ -122,22 +143,7 @@ impl ConfluenceClient {
             .json()
             .await
             .map_err(|e| format!("JSON parse failed: {e}"))?;
-        let pages: Vec<PageInfo> = body["results"]
-            .as_array()
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|p| {
-                        Some(PageInfo {
-                            id: p["id"].as_str()?.to_string(),
-                            title: p["title"].as_str()?.to_string(),
-                            version: p["version"]["number"].as_u64().unwrap_or(1) as u32,
-                            space_key: space_key.to_string(),
-                        })
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        Ok(pages)
+        Ok(parse_pages(&body, space_key, root_only))
     }
 
     pub async fn create_page(
@@ -282,5 +288,68 @@ impl ConfluenceClient {
                 .unwrap_or_default()
                 .to_string(),
         })
+    }
+}
+
+fn parse_pages(body: &Value, space_key: &str, root_only: bool) -> Vec<PageInfo> {
+    body["results"]
+        .as_array()
+        .or_else(|| body["page"]["results"].as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter(|p| {
+                    !root_only
+                        || p["ancestors"]
+                            .as_array()
+                            .map(|ancestors| ancestors.is_empty())
+                            .unwrap_or(true)
+                })
+                .filter_map(|p| {
+                    Some(PageInfo {
+                        id: p["id"].as_str()?.to_string(),
+                        title: p["title"].as_str()?.to_string(),
+                        version: p["version"]["number"].as_u64().unwrap_or(1) as u32,
+                        space_key: p["space"]["key"].as_str().unwrap_or(space_key).to_string(),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_top_level_results_and_filters_root_pages() {
+        let body = serde_json::json!({
+            "results": [
+                { "id": "1", "title": "Root", "version": { "number": 2 }, "ancestors": [] },
+                { "id": "2", "title": "Child", "version": { "number": 1 }, "ancestors": [{ "id": "1" }] }
+            ]
+        });
+
+        let pages = parse_pages(&body, "LAI", true);
+
+        assert_eq!(pages.len(), 1);
+        assert_eq!(pages[0].id, "1");
+    }
+
+    #[test]
+    fn parses_space_content_grouped_page_results() {
+        let body = serde_json::json!({
+            "page": {
+                "results": [
+                    { "id": "10", "title": "Home", "version": { "number": 4 }, "ancestors": [] }
+                ]
+            }
+        });
+
+        let pages = parse_pages(&body, "LAI", true);
+
+        assert_eq!(pages.len(), 1);
+        assert_eq!(pages[0].title, "Home");
+        assert_eq!(pages[0].space_key, "LAI");
     }
 }
